@@ -1,7 +1,6 @@
 import networkx as nx
 import numpy as np
 import sys
-
 modules_path = '/home/rony/Projects_Code/Milestones_Duration/modules'
 if modules_path not in sys.path: sys.path.append(modules_path)
 from paths import *
