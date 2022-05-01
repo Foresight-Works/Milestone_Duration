@@ -14,3 +14,5 @@ def draw_graph(G):
 	nx.draw_networkx_edges(G, pos, edge_color='r')
 	nx.draw_networkx_edges(G, pos)
 	plt.show()
+
+

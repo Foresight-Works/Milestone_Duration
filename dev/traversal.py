@@ -8,6 +8,17 @@ G = nx.path_graph(5)
 node_pairs = [(1, 5), (5, 6), (6, 7), (2, 8), (8, 9), (9, 10)]
 G.add_edges_from(node_pairs)
 #draw_graph(G)
-# T = nx.dfs_tree(G, source=0)
-# T1_edges = list(T.edges())
-# print(T1_edges)
+T = nx.dfs_tree(G, source=0)
+T1_edges = list(T.edges())
+print('dfs tree edgs:', T1_edges)
+
+T = nx.dfs_predecessors(G, source=0)
+#T1_edges = list(T.edges())
+print('dfs predecessors:', T)
+
+print('all_simple_paths')
+for path in nx.all_simple_paths(G, source=0, target=3):
+    print(path)
+
+
+#draw_graph(T)

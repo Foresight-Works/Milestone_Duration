@@ -62,15 +62,6 @@ def list_shortest_paths(G, node_ids, num_pairs=None):
 	return connected_nodes
 
 
-# if nodes_shortest_path:
-# 	connected_nodes[node_pair] = nodes_shortest_path
-# 	with open('milestone_pairs.txt', 'a') as f:
-# 		node_pair_str = '{n1},{n2}\n'.format(n1=node1, n2=node2)
-# 		f.write(node_pair_str)
-# n_jobs is the number of parallel jobs
-	#Parallel(n_jobs=4)(delayed(node_pair_shortest_path)(i) for i in (node_pairs))
-
-
 def list_shortest_paths_parallel(G, node_ids, num_pairs=None):
 
 	'''

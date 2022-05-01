@@ -15,7 +15,7 @@ def milestone_nodes(G, include_fin = True):
 	for milestone_id in milestone_ids: milestones[milestone_id] = G_nodes[milestone_id]
 	return milestones
 
-def milestones_pairs_duration(milestone_paths, planned_duration):
+def milestones_pairs_duration(milestone_paths, planned_duration, ids_names):
 	milestones_duration = {}
 	global milestones_pair_duration
 
@@ -32,19 +32,18 @@ def milestones_pairs_duration(milestone_paths, planned_duration):
 			# print(task_id, task_duration)
 			#write_str += '\n{tid} | {td}'.format(tid=task_id, td=task_duration)
 			milestone_duration += task_duration
-			tasks_duration[task_id] = task_duration
+			name_duraion = (ids_names[task_id], task_duration)
+			tasks_duration[task_id] = name_duraion
 		#write_str += '\nMilestone Duration={md}\n'.format(md=milestones_duration)
 		# print('Milestone Duration=', milestone_duration)
 		# with open('./results/milestone_paths.txt', 'a') as f: f.write(write_str)
 		duration_dict = {'milestone_duration': milestone_duration, 'tasks_duration': tasks_duration}
-
 		return pair_tasks, duration_dict
 
 	pairs_tasks = []
 	for milestones_pair, inter_milestone_tasks in milestone_paths.items():
 		pairs_tasks.append((milestones_pair, inter_milestone_tasks))
 
-	connected_nodes = {}
 	executor = ProcessPoolExecutor(4)
 	for pair_tasks, duration_dict in executor.map(milestones_pair_duration, pairs_tasks):
 		milestones_pair = pair_tasks[0]

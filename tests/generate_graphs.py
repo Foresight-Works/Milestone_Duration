@@ -14,7 +14,6 @@ G.add_edges_from(node_pairs)
 nx.write_adjlist(G, "./data/fully_connected_graph.adjlist")
 # draw_graph(G)
 
-
 # list_connected_nodes test graph
 import networkx as nx
 G = nx.Graph()
