@@ -12,7 +12,7 @@ if modules_dir not in sys.path: sys.path.append(modules_dir)
 from utils import *
 from vizz import *
 
-milestones_duration_dict = np.load('results/old/paired_milestones_duration.npy', allow_pickle=True)[()]
+milestones_duration_dict = np.load('results/paired_milestones_duration.npy', allow_pickle=True)[()]
 milestone_pairs = list(milestones_duration_dict.keys())
 print('{n} milestone pairs'.format(n=len(milestone_pairs)))
 print(milestone_pairs[:10])

@@ -1,3 +1,4 @@
+import networkx as nx
 from joblib import Parallel, delayed
 from concurrent.futures import ProcessPoolExecutor
 
@@ -52,4 +53,58 @@ def milestones_pairs_duration(milestone_paths, planned_duration, ids_names):
 	#Parallel(n_jobs=4)(delayed(milestones_pair_duration)(i) for i in (pairs_tasks))
 	return milestones_duration
 
+from collections import defaultdict
+import collections
+def root_chains(G):
+	'''
+	Identify node chains in a directed graph that start from the root node
+	:param G: DiGraph object
+	:return: List of node chains
+	'''
+	Gnodes = G.nodes()
+	root_node = list(nx.topological_sort(G))[0]
+	# Load root node
+	chains, visited = [[root_node]], [root_node]
+	len_visited, len_nodes = len(visited), len(Gnodes)
+	while len_visited != len_nodes:
+		visited = list(visited)
+		for chain in chains:
+			successors = list(G[chain[-1]].keys())
+			visited += successors
+			for successor in successors:
+				chain_to_add = chain+[successor]
+				chains.append(chain_to_add)
+				#if chain in chains:
+					#chains.remove(chain)
+		visited = set(visited)
+		len_visited, len_nodes = len(visited), len(Gnodes)
+	if [root_node] in chains: chains.remove([root_node])
+	return chains
 
+def is_milestones_chain(chain, ids_types, milestone_types=['TT_Mile', 'TT_FinMile']):
+	'''
+	Identify a task chain as milestones chains (starts and end in a milestone) based on the identification of chain tasks as milestones
+	:param chain: A sequence of tasks
+	:param ids_types (dictionary): Graph tasks types keyed by their task ids
+	:param milestone_codes (list): The
+	:return:
+	'''
+	confirm = False
+	start_id, end_id = chain[0], chain[-1]
+	start_type, end_type = ids_types[start_id], ids_types[end_id]
+	if ((any(start_type==t for t in milestone_types)) &
+		(any(end_type==t for t in milestone_types))):
+		confirm = True
+	return confirm
+
+def milestone_chains(chains, ids_types):
+	'''
+	Build a list of chains that starts and end in a milestone based on the identification of chain tasks as milestones
+	:param chains (list): Root chains to filter
+	:param ids_types (dictionary): Graph tasks types keyed by their task ids
+	:return: Milestone chains
+	'''
+	milestone_chains = []
+	for chain in chains:
+		if is_milestones_chain(chain, ids_types): milestone_chains.append(chain)
+	return milestone_chains

@@ -7,7 +7,6 @@ from paths import *
 from vizz import *
 import collections
 
-
 # def test_list_neighbours():
 # 	data = nx.read_adjlist("./data/list_connected_nodes.adjlist")
 # 	expected_result = [('a', 'c'), ('c', 'd'), ('c', 'f')]

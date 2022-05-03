@@ -18,9 +18,15 @@ data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
 file_name = 'MWH-06-UP#13_FSW_REV.graphml'
 file_path = os.path.join(data_path, file_name)
 graphml_str = open(file_path).read().replace('&amp;', '')
-headers = ['ID', 'TaskType', 'Label', 'PlannedStart', 'PlannedEnd', 'ActualStart', 'ActualEnd', 'Float', 'Status']
+file_path = 'tmp.graphml'
+with open(file_path, 'w') as f: f.write(graphml_str)
+G = nx.read_graphml(file_path)
+G = nx.DiGraph(G)
+os.remove(file_path)
+
 
 # Calculate duration
+headers = ['ID', 'TaskType', 'Label', 'PlannedStart', 'PlannedEnd', 'ActualStart', 'ActualEnd', 'Float', 'Status']
 start = time.time()
 data_df = parse_graphml(file_name, graphml_str, headers)
 ids_names = dict(zip(list(data_df['ID']), list(data_df['Label'])))
@@ -31,11 +37,6 @@ planned_duration_df = pd.DataFrame(list(zip(list(planned_duration.keys()), list(
 planned_duration_df.to_excel('./results/duration_df.xlsx', index=False)
 write_duration('Graphml parsing and duration calculation', start)
 
-file_path = 'tmp.graphml'
-with open(file_path, 'w') as f: f.write(graphml_str)
-G = nx.read_graphml(file_path)
-G = nx.DiGraph(G)
-os.remove(file_path)
 
 print(count_node_types(G))
 
@@ -46,10 +47,13 @@ milestone_ids = list(milestones.keys())
 # Get milestone pairs
 start = time.time()
 milestone_paths = list_shortest_paths_parallel(G, milestone_ids)
-write_duration('list_shortest_paths', start)
-
+'''
+* milestone_path example * 
+('MWH06.C2.E1330', 'MWH-06-01-SSC-F'): 
+	['MWH06.C2.E1330', 'MWH06.C2.C4190', 'MWH06.C2.C4340', 'MWH06-C2.P1800', 'MWH.06.M1010', 'MWH06.C1.Cx4000', 'MWH06.C1.Cx4010', 'MWH-06-01-SSC-F']
+'''
 print('{n} milestone_paths'.format(n=len(milestone_paths)))
-if 'milestone_paths.txt' in os.listdir('./results'): os.remove('./results/milestone_paths.txt')
+write_duration('list_shortest_paths', start)
 print('Calculating milestone durations')
 start = time.time()
 milestones_duration = milestones_pairs_duration(milestone_paths, planned_duration, ids_names)
@@ -102,16 +106,18 @@ for id, pairs in milestones_in_pairs.items():
 					= {'milestone_duration': connected_duration, 'tasks_duration': tasks_duration}
 
 write_duration('Extended pairs identification and duration calculation', start)
-milestones_duration_prep = {**milestones_duration, **extended_milestones_duration}
-
-# Add milestone name to key
-milestones_duration = {}
-for ids_pair, v in milestones_duration_prep.items():
-	id1, id2 = ids_pair[0], ids_pair[1]
-	name1, name2 = ids_names[id1], ids_names[id2]
-	v['milestone_names'] = (name1, name2)
-	milestones_duration[ids_pair] = v
-
-print('milestones_duration result')
-for k, v in milestones_duration.items(): print(k, v)
 np.save('results/milestones_duration.npy', milestones_duration)
+np.save('results/extended_milestones_duration.npy', extended_milestones_duration)
+
+# milestones_duration_prep = {**milestones_duration, **extended_milestones_duration}
+# # Add milestone name to key
+# milestones_duration = {}
+# for ids_pair, v in milestones_duration_prep.items():
+# 	id1, id2 = ids_pair[0], ids_pair[1]
+# 	name1, name2 = ids_names[id1], ids_names[id2]
+# 	v['milestone_names'] = (name1, name2)
+# 	milestones_duration[ids_pair] = v
+#
+# print('milestones_duration result')
+# for k, v in milestones_duration.items(): print(k, v)
+# np.save('results/milestones_duration.npy', milestones_duration)
