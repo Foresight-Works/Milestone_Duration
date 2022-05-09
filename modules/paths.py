@@ -61,7 +61,6 @@ def list_shortest_paths(G, node_ids, num_pairs=None):
 					f.write(node_pair_str)
 	return connected_nodes
 
-
 def list_shortest_paths_parallel(G, node_ids, num_pairs=None):
 
 	'''
@@ -90,3 +89,15 @@ def list_shortest_paths_parallel(G, node_ids, num_pairs=None):
 		if nodes_shortest_path: connected_nodes[node_pair] = nodes_shortest_path
 
 	return connected_nodes
+
+def has_cycle(G):
+    try:
+        cycle = list(nx.find_cycle(G, orientation="original"))
+        res = True
+        # return f"there is at least one cycle in the program \n Cycle:{cycle}", 400
+    except nx.NetworkXNoCycle as cyc_ex:
+        print(cyc_ex)
+        cycle = None
+        res = False
+        # raise RuntimeWarning('There are no cycles detected in the graph')
+    return res, cycle

@@ -4,6 +4,11 @@ import networkx as nx
 import pandas as pd
 import sys
 import os
+import mysql.connector as mysql
+conn_params = {'host': 'localhost', 'user':'rony', 'password':'exp8546$fs', 'database': 'MCdb'}
+conn = mysql.connect(**conn_params)
+c = conn.cursor()
+
 modules_dir = '/home/rony/Projects_Code/Milestones_Duration/modules'
 if modules_dir not in sys.path: sys.path.append(modules_dir)
 modules_dir = '/home/rony/Projects_Code/Cluster_Activities/modules'
@@ -15,9 +20,10 @@ from evaluate import *
 from parsers import *
 from utils import *
 
+
 working_dir = os.getcwd()
 results_dir = os.path.join(working_dir, 'results')
-monitor_dir = os.path.join(results_dir, 'monitor')
+validation_dir = os.path.join(results_dir, 'validation')
 
 # Data
 data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
@@ -31,14 +37,14 @@ start = time.time()
 data_df = parse_graphml(file_name, graphml_str, headers)
 ids_names = dict(zip(list(data_df['ID']), list(data_df['Label'])))
 ids_types = dict(zip(list(data_df['ID']), list(data_df['TaskType'])))
-data_df.to_excel(os.path.join(monitor_dir, 'data_df.xlsx'), index=False)
+data_df.to_excel(os.path.join(validation_dir, 'data_df.xlsx'), index=False)
 
-# Calculate duration
-planned_duration = activities_duration(data_df, 'planned')
-np.save(os.path.join(monitor_dir, 'planned_duration.npy'), planned_duration)
-planned_duration_df = pd.DataFrame(list(zip(list(planned_duration.keys()), list(planned_duration.values()))), columns=['ID', 'planned_duration'])
-planned_duration_df.to_excel(os.path.join(monitor_dir, 'duration_df.xlsx'), index=False)
-write_duration('Graphml parsing and duration calculation', start)
+# # Calculate duration
+# planned_duration = activities_duration(data_df, 'planned')
+# np.save(os.path.join(validation_dir, 'planned_duration.npy'), planned_duration)
+# planned_duration_df = pd.DataFrame(list(zip(list(planned_duration.keys()), list(planned_duration.values()))), columns=['ID', 'planned_duration'])
+# planned_duration_df.to_excel(os.path.join(validation_dir, 'duration_df.xlsx'), index=False)
+# write_duration('Graphml parsing and duration calculation', start)
 
 # Graph
 file_path = 'tmp.graphml'
@@ -47,22 +53,24 @@ G = nx.read_graphml(file_path)
 G = nx.DiGraph(G)
 os.remove(file_path)
 print(count_node_types(G))
+res, cycle = has_cycle(G)
+print('has cycle:', res, cycle)
 
-# Milestone attributes keyed by task ID
-milestones = milestone_nodes(G)
-milestone_ids = list(milestones.keys())
+# Nodes
+Gnodes = list(G.nodes())
+Gnodes_ser = pd.Series(Gnodes)
+unique_nodes = Gnodes_ser.unique()
+print('{n1} nodes | {n2} unique nodes'.format(n1=len(Gnodes), n2=len(unique_nodes)))
 
 # Milestone chains
 print('Milestone chains')
 start = time.time()
-chains = root_chains(G)
-# with open(os.path.join(monitor_dir, 'chains.txt'), 'w') as f:
-# 	for chain in chains: f.write('{c}\n'.format(c=', '.join(chain)))
-chains = milestone_chains(chains, ids_types)
-with open(os.path.join(monitor_dir, 'milestone_chains.txt'), 'w') as f:
-	for chain in chains: f.write('{c}\n'.format(c=', '.join(chain)))
-print('{n} chains'.format(n=len(chains)))
+root_chains(G, ids_types)
+c.execute("SELECT chain FROM milestone_chains;".format(v=root_node))
+chains = c.fetchall()
 write_duration('Milestone chains', start)
+with open(os.path.join(validation_dir, './results/chains.txt'), 'w') as f:
+	for chain in chains: f.write('{c}\n'.format(c=', '.join(chain)))
 
 # Milestone chains duration
 print('Calculating milestone durations')
@@ -73,7 +81,6 @@ first_key = list(milestones_duration.keys())[0]
 print(first_key, milestones_duration[first_key])
 np.save(os.path.join(results_dir, 'milestones_duration.npy', milestones_duration))
 write_duration('Milestone chains duration calculation', start)
-
 
 # milestones_duration_prep = {**milestones_duration, **extended_milestones_duration}
 # # Add milestone name to key

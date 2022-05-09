@@ -1,13 +1,10 @@
 import os
+
 import networkx as nx
 import pandas as pd
+from joblib import Parallel, delayed
 from concurrent.futures import ProcessPoolExecutor
 import time
-import mysql.connector as mysql
-conn_params = {'host': 'localhost', 'user':'rony', 'password':'exp8546$fs', 'database': 'MCdb'}
-conn = mysql.connect(**conn_params)
-c = conn.cursor()
-
 def milestone_nodes(G, include_fin = True):
 	'''
 	:param G: Graph object
@@ -65,7 +62,7 @@ import collections
 def is_milestones_chain(chain, ids_types, milestone_types=['TT_Mile', 'TT_FinMile']):
 	'''
 	Identify a task chain as milestones chains (starts and end in a milestone) based on the identification of chain tasks as milestones
-	:param chain (list): A sequence of tasks
+	:param chain: A sequence of tasks
 	:param ids_types (dictionary): Graph tasks types keyed by their task ids
 	:param milestone_codes (list): The
 	:return:
@@ -88,58 +85,75 @@ def root_chains(G, ids_types):
 	Gedges = list(G.edges())
 	edges_count = len(Gedges)
 	print('{n2} unique edges between {n1} nodes'.format(n1=len(Gnodes), n2=len(set(Gedges))))
+	print('edges sample:', Gedges[:10])
+	milestone_nodes = [n for n in Gnodes if ((ids_types[n] == 'TT_Mile') | (ids_types[n] == 'TT_FinMile'))]
+	milestone_nodes_str = ', '.join(milestone_nodes)
+	with open('milestone_nodes.txt', 'w') as f: f.write(milestone_nodes_str )
 	root_node = list(nx.topological_sort(G))[0]
-
 	# Load root node
-	visited = [root_node]
-	c.execute("DROP TABLE IF EXISTS chains;")
-	c.execute("CREATE TABLE IF NOT EXISTS chains (chain varchar(255));")
-	c.execute("INSERT INTO chains (chain) values ('{v}')".format(v=root_node))
-	# todo: replace drop milestone_chains by creating a results table indexed by file name or id
-	c.execute("DROP TABLE IF EXISTS milestone_chains")
-	c.execute("CREATE TABLE IF NOT EXISTS milestone_chains (chain varchar(255))")
-
+	chains, visited = [[root_node]], [root_node]
 	visited_nodes_count, nodes_count = len(visited), len(Gnodes)
 	step = 0
+	chains_df = pd.DataFrame(chains, columns=['chain'])
+	print(chains_df.head())
+	chains_df.to_pickle('chains_df.pkl')
+	# Todo: replace length by list contents comparison using intersection, should be more accurate, check speed
 	visited_successors, visited_edges = [], []
+	steps_tdas, steps_milestones = {}, {}
+	#while visited_nodes_count != nodes_count:
 	visited_edges_count = 0
 	while visited_edges_count != edges_count:
 		step += 1
-		print('step {s}| {n1} edges, of which {n2} visited'.format(s=step, n1=edges_count, n2=visited_edges_count))
+		print('step {s}| {n1} nodes, of which {n2} visited'.format(s=step, n1=nodes_count, n2=visited_nodes_count))
+		print('          {n1} edges, of which {n2} visited'.format(s=step, n1=edges_count, n2=visited_edges_count))
+		generation_chains = []
 		start = time.time()
+		chains_df = pd.read_pickle('chains_df.pkl')
+		chains = list(chains_df['chain'])
+		del chains_df
+		step_chains = []
+		chains = [chain.split(',') for chain in chains]
 		print('part1')
-		c.execute("SELECT chain FROM chains;".format(v=root_node))
-		chains = [i[0].split('|') for i in c.fetchall()]
-		print('part2: Track {n} chains'.format(n=len(chains)))
-		for chain_val in chains:
-			last_node = chain_val[-1]
+		for chain in chains:
+			last_node = chain[-1]
 			successors = list(G[last_node].keys())
 			for successor in successors:
-				print('calc')
 				visited_edges.append((last_node, successor))
-				chain_successor = chain_val+[successor]
-				v = '|'.join(chain_successor)
-				print('write')
-				statement1 = "INSERT INTO chains (chain) VALUES ('{v}')".format(v=v)
-				#print(statement)
-				c.execute(statement1)
-				conn.commit()
-		print('part3')
+				chain_to_add = chain+[successor]
+				step_chains.append(chain_to_add)
+				visited_successors.append(successor)
+		print('part2')
 		visited_edges_count = len(set(visited_edges))
+		checked_chains = chains + step_chains
+		del chains, step_chains
+		chains_str = [[','.join(chain)] for chain in checked_chains]
+		chains_df = pd.DataFrame(chains_str, columns=['chain']).drop_duplicates()
+		chains_df.to_pickle('chains_df.pkl')
+		print('part 3')
+		# Write milestone chains
+		if [root_node] in checked_chains: checked_chains.remove([root_node])
+		print('filter {n} chains for milestone chains'.format(n=len(checked_chains)))
+		milestone_chains_df = pd.DataFrame(columns=['chain'])
+		if 'milestone_chains.pkl' in os.listdir('./results'):
+			milestone_chains_df = pd.read_pickle('./results/milestone_chains.pkl')
+		if checked_chains:
+			milestone_chains_indices = []
+			for chain_index, chain in enumerate(checked_chains):
+				if is_milestones_chain(chain, ids_types): milestone_chains_indices.append(chain_index)
+			step_milestone_chains_df = chains_df[chains_df.index.isin(milestone_chains_indices)]
+			print('filtering retained {n} milestone chains'.format(n=len(step_milestone_chains_df)))
+			milestone_chains_df = pd.concat([milestone_chains_df, step_milestone_chains_df])
 
-		# Filter and write milestone chains
-		c.execute("SELECT chain FROM chains")
-		chains = [i[0] for i in c.fetchall()]
-		print('filter {n} chains for milestone chains'.format(n=len(chains)))
-		m = 0
-		for chain_str in chains:
-			chain1 = chain_str.split('|')
-			if is_milestones_chain(chain1, ids_types):
-				m += 1
-				statement2 = "INSERT INTO milestone_chains (chain) values ('{v}');".format(v='|'.join(chain1))
-				c.execute(statement2)
-				conn.commit()
-		print('filtering retained {n} milestone chains'.format(n=m))
+		milestone_chains_df.to_pickle('./results/milestone_chains.pkl')
+		del milestone_chains_df
+
+		visited_successors = [root_node] + visited_successors
+		visited = set(visited_successors)
+		visited_nodes_count = len(visited)
+		not_visited = [n for n in list(Gnodes) if n not in visited]
+		not_visited_edges = {}
+		for node in not_visited: not_visited_edges[node] = list(G[node].keys())
+
 		iteration_duration = time.time()-start
 		print('iteration duration=', iteration_duration)
 
