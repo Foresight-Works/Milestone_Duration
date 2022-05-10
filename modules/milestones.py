@@ -3,10 +3,17 @@ import networkx as nx
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 import time
-import mysql.connector as mysql
-conn_params = {'host': 'localhost', 'user':'rony', 'password':'exp8546$fs', 'database': 'MCdb'}
-conn = mysql.connect(**conn_params)
+import mysql.connector as mysql_con
+import pymysql.cursors
+
+from sqlalchemy import create_engine
+user, password, database = 'rony', 'exp8546$fs', 'MCdb'
+conn_params = {'host': 'localhost', 'user': user, 'password': password, 'database': database}
+conn = mysql_con.connect(**conn_params)
 c = conn.cursor()
+
+engine = create_engine('mysql+pymysql://{u}:{p}@localhost/{db}' \
+                       .format(u=user, p=password, db=database))  #:5432
 
 def milestone_nodes(G, include_fin = True):
 	'''
@@ -56,7 +63,6 @@ def milestones_pairs_duration(milestone_paths, planned_duration, ids_names):
 		milestones_pair = pair_tasks[0]
 		milestones_duration[milestones_pair] = duration_dict
 
-	#Parallel(n_jobs=4)(delayed(milestones_pair_duration)(i) for i in (pairs_tasks))
 	return milestones_duration
 
 from collections import defaultdict
@@ -99,38 +105,59 @@ def root_chains(G, ids_types):
 	c.execute("DROP TABLE IF EXISTS milestone_chains")
 	c.execute("CREATE TABLE IF NOT EXISTS milestone_chains (chain varchar(255))")
 
+
 	visited_nodes_count, nodes_count = len(visited), len(Gnodes)
 	step = 0
 	visited_successors, visited_edges = [], []
 	visited_edges_count = 0
 	while visited_edges_count != edges_count:
+		start1 = time.time()
 		step += 1
+		print(50 * '=')
 		print('step {s}| {n1} edges, of which {n2} visited'.format(s=step, n1=edges_count, n2=visited_edges_count))
 		start = time.time()
 		print('part1')
 		c.execute("SELECT chain FROM chains;".format(v=root_node))
 		chains = [i[0].split('|') for i in c.fetchall()]
-		print('part2: Track {n} chains'.format(n=len(chains)))
+		chains_count = len(chains)
+		print('part 1 duration=', time.time()-start)
+		start = time.time()
+		print('part2: Tracking successors for {n} chains'.format(n=chains_count))
+		Xn, r, chains_produced, chunks_count = 0, 10000, 0, 0
+		chains_to_write, written_chains = [], []
 		for chain_val in chains:
 			last_node = chain_val[-1]
 			successors = list(G[last_node].keys())
 			for successor in successors:
-				print('calc')
+				chains_produced += 1
 				visited_edges.append((last_node, successor))
 				chain_successor = chain_val+[successor]
 				v = '|'.join(chain_successor)
-				print('write')
-				statement1 = "INSERT INTO chains (chain) VALUES ('{v}')".format(v=v)
-				#print(statement)
-				c.execute(statement1)
-				conn.commit()
-		print('part3')
-		visited_edges_count = len(set(visited_edges))
+				chains_to_write.append([v])
+				Xn = len(chains_to_write)
+				if Xn == r:
+					chunks_count += 1
+					chains_to_write_df = pd.DataFrame(chains_to_write, columns=['chain'])
+					print('writing {n} successor chains'.format(n=len(chains_to_write_df)))
+					chains_to_write_df.to_sql('chains', engine, if_exists='append', index=False)
+					del chains_to_write_df
+					written_chains += chains_to_write
+					chains_to_write = []
 
+		print('{n1} chains produced, written in {nc} chunks'.format(n1=chains_produced, nc = chunks_count))
+		if Xn > 0:
+			chains_to_write_df = pd.DataFrame(chains_to_write, columns=['chain'])
+			print('writing {n} successor chains that were not written in chunks'.format(n=len(chains_to_write_df)))
+			chains_to_write_df.to_sql('chains', engine, if_exists='append', index=False)
+			del chains_to_write_df
+		del chains
+		print('part 2 duration=', time.time() - start)
+		visited_edges_count = len(set(visited_edges))
 		# Filter and write milestone chains
 		c.execute("SELECT chain FROM chains")
 		chains = [i[0] for i in c.fetchall()]
-		print('filter {n} chains for milestone chains'.format(n=len(chains)))
+		start = time.time()
+		print('part3: filter {n} chains for milestone chains'.format(n=len(chains)))
 		m = 0
 		for chain_str in chains:
 			chain1 = chain_str.split('|')
@@ -139,8 +166,10 @@ def root_chains(G, ids_types):
 				statement2 = "INSERT INTO milestone_chains (chain) values ('{v}');".format(v='|'.join(chain1))
 				c.execute(statement2)
 				conn.commit()
+		del chains
 		print('filtering retained {n} milestone chains'.format(n=m))
-		iteration_duration = time.time()-start
+		print('part 3 duration=', time.time() - start)
+		iteration_duration = time.time()-start1
 		print('iteration duration=', iteration_duration)
 
 	return True
