@@ -84,6 +84,19 @@ def is_milestones_chain(chain, ids_types, milestone_types=['TT_Mile', 'TT_FinMil
 		confirm = True
 	return confirm
 
+
+def extend_chain(chain_successor):
+	chain_visited_edges = []
+	chain, last_node_successors = chain_successor
+	chain_successor_chains = []
+	last_node = chain[-1]
+	for successor in last_node_successors:
+		chain_visited_edges.append((last_node, successor))
+		chain_successor = chain + [successor]
+		v = '|'.join(chain_successor)
+		chain_successor_chains.append(v)
+	return chain_visited_edges, chain_successor_chains
+
 def root_chains(G, ids_types):
 	'''
 	Identify node chains in a directed graph that start from the root node
@@ -105,8 +118,6 @@ def root_chains(G, ids_types):
 	c.execute("DROP TABLE IF EXISTS milestone_chains")
 	c.execute("CREATE TABLE IF NOT EXISTS milestone_chains (chain varchar(255))")
 
-
-	visited_nodes_count, nodes_count = len(visited), len(Gnodes)
 	step = 0
 	visited_successors, visited_edges = [], []
 	visited_edges_count = 0
@@ -123,33 +134,41 @@ def root_chains(G, ids_types):
 		print('part 1 duration=', time.time()-start)
 		start = time.time()
 		print('part2: Tracking successors for {n} chains'.format(n=chains_count))
-		Xn, r, chains_produced, chunks_count = 0, 10000, 0, 0
-		chains_to_write, written_chains = [], []
+
+		# Couple each to the successors of its last node
+		chains_successors = []
 		for chain_val in chains:
 			last_node = chain_val[-1]
-			successors = list(G[last_node].keys())
-			for successor in successors:
-				chains_produced += 1
-				visited_edges.append((last_node, successor))
-				chain_successor = chain_val+[successor]
-				v = '|'.join(chain_successor)
-				chains_to_write.append([v])
-				Xn = len(chains_to_write)
-				if Xn == r:
-					chunks_count += 1
-					chains_to_write_df = pd.DataFrame(chains_to_write, columns=['chain'])
-					print('writing {n} successor chains'.format(n=len(chains_to_write_df)))
-					chains_to_write_df.to_sql('chains', engine, if_exists='append', index=False)
-					del chains_to_write_df
-					written_chains += chains_to_write
-					chains_to_write = []
+			last_node_successors = list(G[last_node].keys())
+			chains_successors.append((chain_val, last_node_successors))
 
-		print('{n1} chains produced, written in {nc} chunks'.format(n1=chains_produced, nc = chunks_count))
+		# Extend chains using the last node successors of each
+		num_executors = 4
+		executor = ProcessPoolExecutor(num_executors)
+		chunk, chains_produced_count, chunks_count = 10000, 0, 0
+		chains_to_write, written_chains = [], []
+		for chain_successor_chains, chain_visited_edges in executor.map(extend_chain, chains_successors):
+			visited_edges += chain_visited_edges
+			chains_produced_count += len(chain_successor_chains)
+			chains_to_write += chain_successor_chains
+			Xn = len(chains_to_write)
+			if Xn == chunk:
+				chunks_count += 1
+				chains_to_write_df = pd.DataFrame(chains_to_write, columns=['chain'])
+				print('writing {n} successor chains'.format(n=len(chains_to_write_df)))
+				chains_to_write_df.to_sql('chains', engine, if_exists='append', index=False)
+				del chains_to_write_df
+				written_chains += chains_to_write
+				chains_to_write = []
+
+		print('{n1} chains produced, written in {nc} chunks'.format(n1=chains_produced_count, nc=chunks_count))
 		if Xn > 0:
+			chains_to_write = ['|'.join(chain) for chain in chains_to_write]
 			chains_to_write_df = pd.DataFrame(chains_to_write, columns=['chain'])
 			print('writing {n} successor chains that were not written in chunks'.format(n=len(chains_to_write_df)))
 			chains_to_write_df.to_sql('chains', engine, if_exists='append', index=False)
 			del chains_to_write_df
+
 		del chains
 		print('part 2 duration=', time.time() - start)
 		visited_edges_count = len(set(visited_edges))
