@@ -1,0 +1,124 @@
+/home/rony/Projects_Code/Cluster_Activities/venv/bin/python /home/rony/Projects_Code/Milestones_Duration/mc.py
+parsing 2613 nodes
+         Type  Count
+0     TT_Task   2093
+1     TT_Mile    289
+2  TT_FinMile    231
+No cycle found.
+has cycle: False None
+2613 nodes | 2613 unique nodes
+Milestone chains
+9600 unique edges between 2613 nodes
+==================================================
+step 1| 9600 edges, of which 0 visited
+part1
+part 1 duration= 0.00023031234741210938
+part2: Tracking successors for 1 chains
+writing 36 successor chains that were not written in chunks
+part 2 duration= 0.006118059158325195
+visited_edges_count: 36
+unique visited_edges_count: 36
+part3: filter 37 chains for milestone chains
+18 milestone chains identified in this iteration
+18 milestone chains identified thus far
+part 3 duration= 0.026163339614868164
+iteration duration= 0.03289079666137695
+==================================================
+step 2| 9600 edges, of which 36 visited
+part1
+part 1 duration= 0.0002846717834472656
+part2: Tracking successors for 37 chains
+writing 485 successor chains that were not written in chunks
+part 2 duration= 0.031185388565063477
+visited_edges_count: 521
+unique visited_edges_count: 485
+part3: filter 522 chains for milestone chains
+260 milestone chains identified in this iteration
+278 milestone chains identified thus far
+part 3 duration= 0.20653843879699707
+iteration duration= 0.23908376693725586
+==================================================
+step 3| 9600 edges, of which 485 visited
+part1
+part 1 duration= 0.00106048583984375
+part2: Tracking successors for 522 chains
+writing 2991 successor chains that were not written in chunks
+part 2 duration= 0.15693259239196777
+visited_edges_count: 3512
+unique visited_edges_count: 1489
+part3: filter 3513 chains for milestone chains
+2121 milestone chains identified in this iteration
+2399 milestone chains identified thus far
+part 3 duration= 1.3820383548736572
+iteration duration= 1.5443472862243652
+==================================================
+step 4| 9600 edges, of which 1489 visited
+part1
+part 1 duration= 0.0045452117919921875
+part2: Tracking successors for 3513 chains
+14049 chains produced, written in 1 chunks
+writing 4047 successor chains that were not written in chunks
+part 2 duration= 0.6481969356536865
+visited_edges_count: 17561
+unique visited_edges_count: 2979
+part3: filter 17562 chains for milestone chains
+9957 milestone chains identified in this iteration
+12356 milestone chains identified thus far
+part 3 duration= 5.469235420227051
+iteration duration= 6.138953924179077
+==================================================
+step 5| 9600 edges, of which 2979 visited
+part1
+part 1 duration= 0.015228271484375
+part2: Tracking successors for 17562 chains
+60350 chains produced, written in 6 chunks
+writing 334 successor chains that were not written in chunks
+part 2 duration= 2.381223440170288
+visited_edges_count: 77911
+unique visited_edges_count: 5419
+part3: filter 77912 chains for milestone chains
+36626 milestone chains identified in this iteration
+48982 milestone chains identified thus far
+part 3 duration= 24.3185453414917
+iteration duration= 26.77818751335144
+==================================================
+step 6| 9600 edges, of which 5419 visited
+part1
+part 1 duration= 0.07398796081542969
+part2: Tracking successors for 77912 chains
+261509 chains produced, written in 26 chunks
+writing 1447 successor chains that were not written in chunks
+part 2 duration= 10.474191427230835
+visited_edges_count: 339420
+unique visited_edges_count: 6841
+part3: filter 339421 chains for milestone chains
+126585 milestone chains identified in this iteration
+175567 milestone chains identified thus far
+part 3 duration= 118.38903450965881
+iteration duration= 129.22858333587646
+==================================================
+step 7| 9600 edges, of which 6841 visited
+part1
+part 1 duration= 0.37471914291381836
+part2: Tracking successors for 339421 chains
+1153853 chains produced, written in 115 chunks
+writing 3614 successor chains that were not written in chunks
+part 2 duration= 53.01987934112549
+visited_edges_count: 1493273
+unique visited_edges_count: 7634
+part3: filter 1493274 chains for milestone chains
+456363 milestone chains identified in this iteration
+631930 milestone chains identified thus far
+part 3 duration= 592.2515242099762
+iteration duration= 647.0576021671295
+==================================================
+step 8| 9600 edges, of which 7634 visited
+part1
+part 1 duration= 1.8443706035614014
+part2: Tracking successors for 1493274 chains
+5052411 chains produced, written in 505 chunks
+writing 1149 successor chains that were not written in chunks
+part 2 duration= 253.45224905014038
+visited_edges_count: 6545684
+unique visited_edges_count: 7860
+part3: filter 6545685 chains for milestone chains
