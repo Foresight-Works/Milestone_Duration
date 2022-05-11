@@ -98,6 +98,40 @@ def extend_chain(chain_successor):
 	return chain_successor_chains, chain_visited_edges
 
 
+def write_chains(chains, table_name, tmp_path):
+	with open(tmp_path, 'w') as f:
+		for chain in chains: f.write('{c}\n'.format(c=chain))
+	statement = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE {tn} LINES TERMINATED BY '\n'".format(
+		tp=tmp_path, tn=table_name)
+	#print('statement:', statement)
+	c.execute(statement)
+
+def get_tasks_types(chains, ids_types):
+	chains_tasks_types = []
+	for chain_str in chains:
+		chain = chain_str.split('|')
+		chains_tasks_types.append((chain, {k: v for k, v in ids_types.items() if k in chain}))
+	return (chains_tasks_types)
+
+def collect_filter_results(chains, num_executors, tmp_path, ids_types):
+	executor2 = ProcessPoolExecutor(num_executors)
+	## Write chains for the next iteration
+	write_chains(chains, 'chains', tmp_path)
+	# Identify the type of each task in the chains identified
+	chains_tasks_types = get_tasks_types(chains, ids_types)
+	## Filter tasks chains
+	milestone_chains = []
+	# Parallelized
+	#for chain2, confirm in executor2.map(is_milestones_chain, chains_tasks_types):
+	#	if confirm: milestone_chains.append('|'.join(chain2))
+	for chain2, confirm in map(is_milestones_chain, chains_tasks_types):
+		if confirm: milestone_chains.append('|'.join(chain2))
+	executor2.shutdown()
+	## Write results: milestone chains
+	write_chains(milestone_chains, 'milestone_chains', tmp_path)
+
+	return milestone_chains
+
 def root_chains(G, ids_types):
 	'''
 	Identify node chains in a directed graph that start from the root node
@@ -110,16 +144,17 @@ def root_chains(G, ids_types):
 	print('{n2} unique edges between {n1} nodes'.format(n1=len(Gnodes), n2=len(set(Gedges))))
 	root_node = list(nx.topological_sort(G))[0]
 	tmp_path = os.path.join(os.getcwd(), 'chains_temp.txt')
+	print('aaa')
 
 	# Load root node
 	visited = [root_node]
 	c.execute("DROP TABLE IF EXISTS chains;")
+	print('DROP TABLE IF EXISTS chains;')
 	c.execute("CREATE TABLE IF NOT EXISTS chains (chain varchar(255));")
 	c.execute("INSERT INTO chains (chain) values ('{v}')".format(v=root_node))
 	# todo: replace drop milestone_chains by creating a results table indexed by file name or id
 	c.execute("DROP TABLE IF EXISTS milestone_chains")
 	c.execute("CREATE TABLE IF NOT EXISTS milestone_chains (chain varchar(255))")
-
 	step = 0
 	visited_successors, visited_edges = [], []
 	visited_edges_count = 0
@@ -146,71 +181,48 @@ def root_chains(G, ids_types):
 			chains_successors.append((chain_val, last_node_successors))
 
 		# Extend chains using the last node successors of each
-		num_executors = 4
-		executor = ProcessPoolExecutor(num_executors)
+		num_executors = 6
+		executor1 = ProcessPoolExecutor(num_executors)
 		chunk, chains_produced_count, chunks_count = 10000, 0, 0
-		chains_to_write = []
-		for chain_successor_chains, chain_visited_edges in executor.map(extend_chain, chains_successors):
+		tasks_chains = []
+		for chain_successor_chains, chain_visited_edges in executor1.map(extend_chain, chains_successors):
 			visited_edges += chain_visited_edges
 			chains_produced_count += len(chain_successor_chains)
-			chains_to_write += chain_successor_chains
-			Xn = len(chains_to_write)
+			tasks_chains += chain_successor_chains
+			Xn = len(tasks_chains)
 			if Xn >= chunk:
 				chunks_count += 1
-				with open(tmp_path, 'w') as f:
-					for chain in chains_to_write: f.write('{c}\n'.format(c=chain))
-				statement3 = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE chains LINES TERMINATED BY '\n'".format(tp=tmp_path)
-				c.execute(statement3)
-				chains_to_write = []
+				milestone_chains = collect_filter_results(tasks_chains, num_executors, tmp_path, ids_types)
+				milestones_chain_count += len(milestone_chains)
+				tasks_chains = []
+			executor1.shutdown()
+
 		if chunks_count > 0: print('{n1} chains produced, written in {nc} chunks'.format(n1=chains_produced_count, nc=chunks_count))
 		if Xn > 0:
-			print('writing {n} successor chains that were not written in chunks'.format(n=len(chains_to_write)))
-			with open(tmp_path, 'w') as f:
-				for chain in chains_to_write: f.write('{c}\n'.format(c=chain))
-			statement4 = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE chains LINES TERMINATED BY '\n'".format(tp=tmp_path)
-			c.execute(statement4)
+			print('writing {n} successor chains that were not written in chunks'.format(n=len(tasks_chains)))
+			milestone_chains = collect_filter_results(tasks_chains, num_executors, tmp_path, ids_types)
+			milestones_chain_count += len(milestone_chains)
 
-		del chains
+		del chains, tasks_chains
 		print('part 2 duration=', time.time() - start)
 		visited_edges_count1 = len(visited_edges)
 		print('visited_edges_count:', visited_edges_count1)
 		visited_edges_count = len(set(visited_edges))
 		print('unique visited_edges_count:', visited_edges_count)
-		## Filter and write milestone chains
-		# Extract the tasks chains to filter
-		c.execute("SELECT chain FROM chains")
-		tasks_chains = [i[0] for i in c.fetchall()]
-		start = time.time()
-		print('part3: filter {n} chains for milestone chains'.format(n=len(tasks_chains)))
-		# Build a dictionary of tasks types for each task in each chain in the chains extracted for filtering
-		chains_tasks_types = []
-		for chain_str in tasks_chains:
-			chain1 = chain_str.split('|')
-			chains_tasks_types.append((chain1, {k: v for k, v in ids_types.items() if k in chain1}))
-		del tasks_chains
-		chains_to_write = []
-		for chain2, confirm in executor.map(is_milestones_chain, chains_tasks_types):
-			if confirm: chains_to_write.append('|'.join(chain2))
-		with open(tmp_path, 'w') as f:
-			for chain in chains_to_write: f.write('{c}\n'.format(c=chain))
+		iteration_duration = time.time()-start1
+		print('iteration duration=', iteration_duration)
+		print('{n} milestone chains identified'.format(n=milestones_chain_count))
 
-		# Validation
+		## Validation
+		c.execute("SELECT chain FROM milestone_chains;".format(v=root_node))
+		milestone_chains = [i[0] for i in c.fetchall()]
 		with open('./results/validation/chains_task_types.txt', 'w') as f:
-			for chain in chains_to_write:
+			for chain in milestone_chains:
 				ids = chain.split('|')
 				types = (ids_types[id] for id in ids)
 				chains_ids_types = str(dict(zip(ids, types))).replace("'", "")
 				f.write('{c}\n'.format(c=chains_ids_types))
-		statement3 = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE milestone_chains LINES TERMINATED BY '\n'".format(tp=tmp_path)
-		c.execute(statement3)
-		print('{n} milestone chains identified in this iteration'.format(n=len(chains_to_write)))
-		milestones_chain_count += len(chains_to_write)
-		print('{n} milestone chains identified thus far'.format(n=milestones_chain_count))
-		del chains_to_write
 
-		print('part 3 duration=', time.time() - start)
-		iteration_duration = time.time()-start1
-		print('iteration duration=', iteration_duration)
 
 	return True
 
