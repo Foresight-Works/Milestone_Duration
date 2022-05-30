@@ -1,6 +1,5 @@
 import os
 import networkx as nx
-import re
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 import time
@@ -65,6 +64,9 @@ def milestones_pairs_duration(milestone_paths, planned_duration, ids_names):
 
 	return milestones_duration
 
+from collections import defaultdict
+import collections
+
 def is_milestones_chain(chain_ids_types, milestone_types=['TT_Mile', 'TT_FinMile']):
 	'''
 	Identify a task chain as milestones chains (starts and end in a milestone) based on the identification of chain tasks as milestones
@@ -75,63 +77,40 @@ def is_milestones_chain(chain_ids_types, milestone_types=['TT_Mile', 'TT_FinMile
 	chain, ids_types = chain_ids_types
 	confirm = False
 	start_id, end_id = chain[0], chain[-1]
-	#print(chain, start_id, end_id, ids_types)
 	start_type, end_type = ids_types[start_id], ids_types[end_id]
 	if ((any(start_type == t for t in milestone_types)) &
 			(any(end_type == t for t in milestone_types))):
 		confirm = True
 	return chain, confirm
 
-def extend_chain(chains_successors_links):
-	'''
-	Extend a chain of nodes using the successors of the last node in the chain
-	:param chains_successors_links(list): The chain to extend followed by a dictionary of link types for each combination of the last node in the chain and a successor
-	Example:
-	['MWH.06.M1000'], {('MWH.06.M1000', 'A1170'): 'FS', ('MWH.06.M1000', 'MWH06-2029'): 'FS', ('MWH.06.M1000', 'MWH06-2527'): 'FS', ('MWH.06.M1000', 'MWH06.D1.S1010'): 'FS'...}
-	:return:
-	'''
+def extend_chain(chain_successor):
 	chain_visited_edges = []
-	chain, successors_links = chains_successors_links
-	last_node_successors = list(successors_links.keys())
+	chain, last_node_successors = chain_successor
 	chain_successor_chains = []
-	for last_node_successor in last_node_successors:
-		chain_visited_edges.append(last_node_successor)
-		pair_link_type = successors_links[last_node_successor]
-		chain_successor = chain + ['<{lt}>'.format(lt=pair_link_type), last_node_successor[1]]
-		chain_successor_chains.append(chain_successor)
+	last_node = chain[-1]
+	for successor in last_node_successors:
+		chain_visited_edges.append((last_node, successor))
+		chain_successor = chain + [successor]
+		v = '|'.join(chain_successor)
+		chain_successor_chains.append(v)
 	chain_visited_edges = list(set(chain_visited_edges))
+	#print('{n} chain_visited_edges in extend_chain:'.format(n=len(chain_visited_edges)), chain_visited_edges)
 	return chain_successor_chains, chain_visited_edges
+
 
 def write_chains(chains, table_name, tmp_path):
 	with open(tmp_path, 'w') as f:
-		for chain in chains: f.write('{c}\n'.format(c=''.join(chain)))
+		for chain in chains: f.write('{c}\n'.format(c=chain))
 	statement = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE {tn} LINES TERMINATED BY '\n'".format(
 		tp=tmp_path, tn=table_name)
+	#print('statement:', statement)
 	c.execute(statement)
 
-def handle_link_type(chain, remove=False):
-	'''
-	Return or remove the type of nodes link from the chain representation of the nodes
-	:param chain (list): A representation of the node pair in the form of [node 1, link, node2]
-	for example: ['MWH.06.M1000', '<FS>', 'MWH06-2029']
-	:param remove (bool): Instruction to remove the chain link
-	:return: The chain link (default) or the chain without the link(remove=True)
-	'''
-	dependency_types = ['FS', 'SF', 'SS', 'FF']
-	if remove: return [i for i in chain if not any(t in i for t in dependency_types)]
-	else:
-		m = [i for i in chain if any(t in i for t in dependency_types)]
-		if m: return m[0]
-		else: return ''
-
 def get_tasks_types(chains, ids_types):
-	chain_links = [handle_link_type(chain) for chain in chains]
 	chains_tasks_types = []
-	for index, chain in enumerate(chains):
-		chain_link = chain_links[index]
-		chain_nodes = [n for n in chain if n != chain_link]
-		nodes_types = {k: v for k, v in ids_types.items() if k in chain_nodes}
-		chains_tasks_types.append((chain, nodes_types))
+	for chain_str in chains:
+		chain = chain_str.split('|')
+		chains_tasks_types.append((chain, {k: v for k, v in ids_types.items() if k in chain}))
 	return (chains_tasks_types)
 
 def collect_filter_results(chains, num_executors, tmp_path, ids_types):
@@ -142,32 +121,16 @@ def collect_filter_results(chains, num_executors, tmp_path, ids_types):
 	chains_tasks_types = get_tasks_types(chains, ids_types)
 	## Filter tasks chains
 	milestone_chains = []
-
 	# Parallelized
-	# for chain2, confirm in executor2.map(is_milestones_chain, chains_tasks_types):
+	#for chain2, confirm in executor2.map(is_milestones_chain, chains_tasks_types):
+	#	if confirm: milestone_chains.append('|'.join(chain2))
 	for chain2, confirm in map(is_milestones_chain, chains_tasks_types):
-		if confirm:
-			nodes_str =''.join(chain2)
-			milestone_chains.append(nodes_str)
+		if confirm: milestone_chains.append('|'.join(chain2))
 	executor2.shutdown()
 	## Write results: milestone chains
 	write_chains(milestone_chains, 'milestone_chains', tmp_path)
+
 	return milestone_chains
-
-
-def get_successors_types(node, successors, edges_types):
-	'''
-	Identify and write types of links between a node and each of its successors
-	:param node (list): A graph node name
-	:param successors(list): The node's successors
-	:param edges_types(dict): The list of link types per edge keyed by a tuple of the nodes connected by this edge
-	:return: A dictionary of link types per successor keyed by (node, successor) tuple
-	'''
-	successors_types = {}
-	for successor in successors:
-		pair = (node, successor)
-		successors_types[pair] = edges_types[pair]
-	return successors_types
 
 def root_chains(G, ids_types):
 	'''
@@ -176,20 +139,24 @@ def root_chains(G, ids_types):
 	:return: List of node chains
 	'''
 
-	Gnodes, Gedges = G.nodes(), G.edges()
+	Gnodes = G.nodes()
+	Gedges = G.edges(data=True)
 	edges_count = len(Gedges)
 	print('{n2} unique edges between {n1} nodes'.format(n1=len(Gnodes), n2=len(set(Gedges))))
 	root_node = list(nx.topological_sort(G))[0]
 	tmp_path = os.path.join(os.getcwd(), 'chains_temp.txt')
+	print('aaa')
 
-	Gedges = G.edges(data=True)
 	edges_types = {}
-	for Gedge in Gedges: edges_types[(Gedge[0], Gedge[1])] = Gedge[2]['Dependency']
-	not_FS = [t for t in list(set(edges_types.values())) if t != 'FS']
+	for Gedge in Gedges:
+		print(Gedge)
+		edges_types[(Gedge[0], Gedge[1])] = Gedge[2]['Dependency']
+	print('edges_types:', edges_types)
 
 	# Load root node
 	visited = [root_node]
 	c.execute("DROP TABLE IF EXISTS chains;")
+	print('DROP TABLE IF EXISTS chains;')
 	c.execute("CREATE TABLE IF NOT EXISTS chains (chain varchar(255));")
 	c.execute("INSERT INTO chains (chain) values ('{v}')".format(v=root_node))
 	# todo: replace drop milestone_chains by creating a results table indexed by file name or id
@@ -199,9 +166,6 @@ def root_chains(G, ids_types):
 	visited_successors, visited_edges = [], []
 	visited_edges_count = 0
 	milestones_chain_count = 0
-	link_types = ['<FS>', '<SF>', '<SS>', '<FF>']
-	link_types_str = '|'.join(link_types)
-
 	while visited_edges_count != edges_count:
 		start1 = time.time()
 		step += 1
@@ -210,28 +174,25 @@ def root_chains(G, ids_types):
 		start = time.time()
 		print('part1')
 		c.execute("SELECT chain FROM chains;".format(v=root_node))
-		chains_fetched = c.fetchall()
-		chains_fetched = [chain[0] for chain in chains_fetched]
-		chains = [re.split('({lt})'.format(lt=link_types_str), chain) for chain in chains_fetched]
+		chains = [i[0].split('|') for i in c.fetchall()]
 		chains_count = len(chains)
 		print('part 1 duration=', time.time()-start)
 		start = time.time()
 		print('part2: Tracking successors for {n} chains'.format(n=chains_count))
 
-		# Couple each chain to the successors of its last node
-		chains_successors_links = []
-		for chain in chains:
-			last_node = chain[-1]
+		# Couple each to the successors of its last node
+		chains_successors = []
+		for chain_val in chains:
+			last_node = chain_val[-1]
 			last_node_successors = list(G[last_node].keys())
-			successors_types = get_successors_types(last_node, last_node_successors, edges_types)
-			chains_successors_links.append((chain, successors_types))
+			chains_successors.append((chain_val, last_node_successors))
+
 		# Extend chains using the last node successors of each
 		num_executors = 6
 		executor1 = ProcessPoolExecutor(num_executors)
 		chunk, chains_produced_count, chunks_count = 10000, 0, 0
 		tasks_chains = []
-		#for chain_successor_chains, chain_visited_edges in executor1.map(extend_chain, chains_successors):
-		for chain_successor_chains, chain_visited_edges in map(extend_chain, chains_successors_links):
+		for chain_successor_chains, chain_visited_edges in executor1.map(extend_chain, chains_successors):
 			visited_edges += chain_visited_edges
 			chains_produced_count += len(chain_successor_chains)
 			tasks_chains += chain_successor_chains
@@ -248,6 +209,7 @@ def root_chains(G, ids_types):
 			print('writing {n} successor chains that were not written in chunks'.format(n=len(tasks_chains)))
 			milestone_chains = collect_filter_results(tasks_chains, num_executors, tmp_path, ids_types)
 			milestones_chain_count += len(milestone_chains)
+
 		del chains, tasks_chains
 		print('part 2 duration=', time.time() - start)
 		visited_edges_count1 = len(visited_edges)
@@ -263,15 +225,11 @@ def root_chains(G, ids_types):
 		milestone_chains = [i[0] for i in c.fetchall()]
 		with open('./results/validation/chains_task_types.txt', 'w') as f:
 			for chain in milestone_chains:
-				val_to_write = ''
-				split_chain = re.split('({lt})'.format(lt=link_types_str), chain)
-				for element in split_chain:
-					if element in link_types:
-						val_to_write += element
-					else:
-						element_type = ids_types[element]
-						val_to_write += '{e}({t})'.format(e=element, t=element_type)
-				f.write('{c}\n'.format(c=val_to_write))
+				ids = chain.split('|')
+				types = (ids_types[id] for id in ids)
+				chains_ids_types = str(dict(zip(ids, types))).replace("'", "")
+				f.write('{c}\n'.format(c=chains_ids_types))
+
 
 	return True
 
