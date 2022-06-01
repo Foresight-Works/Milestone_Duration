@@ -20,7 +20,6 @@ from evaluate import *
 from parsers import *
 from utils import *
 
-
 working_dir = os.getcwd()
 results_dir = os.path.join(working_dir, 'results')
 validation_dir = os.path.join(results_dir, 'validation')
@@ -65,8 +64,8 @@ print('{n1} nodes | {n2} unique nodes'.format(n1=len(Gnodes), n2=len(unique_node
 # Milestone chains
 print('Milestone chains')
 start = time.time()
-root_chains(G, ids_types)
-c.execute("SELECT chain FROM milestone_chains;".format(v=root_node))
+root_chains(G)
+c.execute("SELECT chain FROM milestone_chains;")
 chains = c.fetchall()
 write_duration('Milestone chains', start)
 with open(os.path.join(validation_dir, './results/chains.txt'), 'w') as f:

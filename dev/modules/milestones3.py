@@ -15,6 +15,17 @@ conn_params = {'host': 'localhost', 'user': user, 'password': password, 'databas
 conn = mysql_con.connect(**conn_params, allow_local_infile = True)
 c = conn.cursor()
 
+# todo dependency management: store and import from standard utils
+def isfloat(value):
+    '''
+    Check if the input value type is float
+    '''
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
 from sqlalchemy import create_engine
 engine = create_engine('mysql+pymysql://{u}:{p}@localhost/{db}' \
                        .format(u=user, p=password, db=database))  #:5432
@@ -96,10 +107,12 @@ def extend_chain(chains_successors_links):
 	:return:
 	'''
 	chain_visited_edges = []
-	chain, last_node_successors = chains_successors_links
+	chain, successors_links = chains_successors_links
+	last_node_successors = list(successors_links.keys())
 	chain_successor_chains = []
 	for last_node_successor in last_node_successors:
-		chain_successor = chain + [last_node_successor]
+		pair_link_type = successors_links[last_node_successor]
+		chain_successor = chain + ['<{lt}>'.format(lt=pair_link_type), last_node_successor[1]]
 		chain_successor_chains.append(chain_successor)
 		chain_visited_edges.append(last_node_successor)
 	chain_visited_edges = list(set(chain_visited_edges))
@@ -108,13 +121,13 @@ def extend_chain(chains_successors_links):
 def write_chains(chains, table_name, tmp_path):
 	chains_to_write = []
 	for chain in chains:
-		#print('-----')
-		#print('chain       :', chain)
+		print('-----')
+		print('chain       :', chain)
 		chain = [str(task_float) for task_float in chain]
-		#print('str elements:', chain)
-		chain = '-'.join(chain)
-		# print('str   joined:', chain)
-		# print(chain)
+		print('str elements:', chain)
+		chain = ''.join(chain)
+		print('str   joined:', chain)
+		print(chain)
 		chains_to_write.append(chain)
 	chains_to_write = '\n'.join(chains_to_write)
 	with open(tmp_path, 'w') as f: f.write(chains_to_write)
@@ -167,6 +180,20 @@ def collect_filter_results(chains, num_executors, tmp_path, ids_types, hash_node
 	return milestone_chains
 
 
+def get_successors_types(node, successors, edges_types):
+	'''
+	Identify the types of links between a node and each of its successors
+	:param node (list): A graph node name
+	:param successors(list): The node's successors
+	:param edges_types(dict): The list of link types per edge keyed by a tuple of the nodes connected by this edge
+	:return: A dictionary of link types per successor keyed by (node, successor) tuple
+	'''
+	successors_types = {}
+	for successor in successors:
+		pair = (node, successor)
+		successors_types[pair] = edges_types[pair]
+	return successors_types
+
 def strings_floats_hash(strings):
 	'''
 	Hash strings as a floating point number
@@ -190,20 +217,6 @@ def build_ids_types(G):
 	Gnodes = list(G.nodes())
 	ids_types = dict(zip(Gnodes, tasks_types))
 	return ids_types
-
-def get_successors_types(node, successors, edges_types):
-	'''
-	Identify the types of links between a node and each of its successors
-	:param node (list): A graph node name
-	:param successors(list): The node's successors
-	:param edges_types(dict): The list of link types per edge keyed by a tuple of the nodes connected by this edge
-	:return: A dictionary of link types per successor keyed by (node, successor) tuple
-	'''
-	successors_types = {}
-	for successor in successors:
-		pair = (node, successor)
-		successors_types[pair] = edges_types[pair]
-	return successors_types
 
 def root_chains(G):
 	'''
@@ -239,6 +252,7 @@ def root_chains(G):
 	visited_edges_count = 0
 	milestones_chain_count = 0
 	link_types = ['<FS>', '<SF>', '<SS>', '<FF>']
+	link_types_str = '|'.join(link_types)
 	tmp_path = os.path.join(os.getcwd(), 'chains_temp.txt')
 
 	while visited_edges_count != edges_count:
@@ -250,6 +264,7 @@ def root_chains(G):
 		tasks_chains = []
 		mem_sizes = []
 		write_chunk, chains_produced_count, write_chunks_count = 10000, 0, 0
+
 		print(50 * '=')
 		print('step {s}| {n1} edges, of which {n2} visited'.format(s=step, n1=edges_count, n2=visited_edges_count))
 		start = time.time()
@@ -257,7 +272,7 @@ def root_chains(G):
 		c.execute("SELECT chain FROM chains;".format(v=root_node))
 		chains_fetched = c.fetchall()
 		chains_fetched = [chain[0] for chain in chains_fetched]
-		chains = [re.split('-', chain) for chain in chains_fetched]
+		chains = [re.split('({lt})'.format(lt=link_types_str), chain) for chain in chains_fetched]
 		del chains_fetched
 		chains_count = len(chains)
 		print('part 1 duration=', time.time()-start)
@@ -265,22 +280,23 @@ def root_chains(G):
 		print('part2: Tracking successors for {n} chains'.format(n=chains_count))
 		# Couple each chain to the successors of its last node
 		chains_successors_links = []
-
-		# Collect the successor tasks for the last task in the chain
 		for chain in chains:
-			chain = [float(t) for t in chain]
-			last_node = chain[-1]
-			successors = list(G[last_node].keys())
-			chains_successors_links.append((chain, successors))
-		mem_size = sys.getsizeof(chains_successors_links)
-		print('size of chains = {c}'.format(c=mem_size))
+			chain = [float(t) for t in chain if isfloat(t)]
+			chain_tuple = tuple(chain)
+			if chain_tuple in list(edges_types.keys()):
+				chain_link = '<{lt}>'.format(lt=edges_types[chain_tuple])
+				chain = [chain[0], chain_link, chain[1]]
+			last_node = float(chain[-1])
+			last_node_successors = list(G[last_node].keys())
+			successors_types = get_successors_types(last_node, last_node_successors, edges_types)
+			chains_successors_links.append((chain, successors_types))
+
 		del chains
 		print('part 2 duration=', time.time() - start)
 		# Extend chains using the last node successors of each
 		print('part3: chains extensions by node children'.format(n=chains_count))
 		start = time.time()
-		for chain_successor_chains, chain_visited_edges in executor1.map(extend_chain, chains_successors_links):
-		#for chain_successor_chains, chain_visited_edges in map(extend_chain, chains_successors_links):
+		for chain_successor_chains, chain_visited_edges in map(extend_chain, chains_successors_links):
 			mem = psutil.virtual_memory().percent
 			mem_sizes.append(mem)
 			# mem_dict = psutil.virtual_memory()._asdict()
