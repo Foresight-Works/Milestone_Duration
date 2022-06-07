@@ -1,4 +1,5 @@
 import time
+from datetime import datetime
 import numpy as np
 import networkx as nx
 import pandas as pd
@@ -8,7 +9,6 @@ import mysql.connector as mysql
 conn_params = {'host': 'localhost', 'user':'rony', 'password':'exp8546$fs', 'database': 'MCdb'}
 conn = mysql.connect(**conn_params)
 c = conn.cursor()
-
 modules_dir = '/home/rony/Projects_Code/Milestones_Duration/modules'
 if modules_dir not in sys.path: sys.path.append(modules_dir)
 modules_dir = '/home/rony/Projects_Code/Cluster_Activities/modules'
@@ -22,7 +22,16 @@ from utils import *
 
 working_dir = os.getcwd()
 results_dir = os.path.join(working_dir, 'results')
+
+# Prepare and empty validation directories
 validation_dir = os.path.join(results_dir, 'validation')
+val_dirs = ['chains', 'milestone_chains']
+for dir in val_dirs:
+	path = os.path.join(validation_dir, dir)
+	files = os.listdir(path)
+	for f in files:
+		fpath = os.path.join(path, f)
+		os.remove(fpath)
 
 # Data
 data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
@@ -64,12 +73,19 @@ print('{n1} nodes | {n2} unique nodes'.format(n1=len(Gnodes), n2=len(unique_node
 # Milestone chains
 print('Milestone chains')
 start = time.time()
-root_chains(G)
+print("Root chains start:", datetime.now().strftime("%H:%M:%S"))
+root_chains(G, conn)
+write_duration('Milestone chains', start)
+
+# Read milestone chains
 c.execute("SELECT chain FROM milestone_chains;")
 chains = c.fetchall()
-write_duration('Milestone chains', start)
-with open(os.path.join(validation_dir, './results/chains.txt'), 'w') as f:
+# Validation
+with open(os.path.join(validation_dir, 'milestone_chains.txt'), 'w') as f:
 	for chain in chains: f.write('{c}\n'.format(c=', '.join(chain)))
+
+# Tasks links
+link_types = ['<FS>', '<SF>', '<SS>', '<FF>']
 
 # Milestone chains duration
 print('Calculating milestone durations')
