@@ -9,7 +9,7 @@ import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 import time
 import mysql.connector as mysql_con
-import pymysql.cursors
+
 user, password, database = 'rony', 'exp8546$fs', 'MCdb'
 conn_params = {'host': 'localhost', 'user': user, 'password': password, 'database': database}
 conn = mysql_con.connect(**conn_params, allow_local_infile = True)
