@@ -1,3 +1,4 @@
+import os
 data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
 
 ## Server
@@ -22,3 +23,12 @@ conn_params = server_db_params[serviceLocation]
 conn = mysql.connect(**conn_params)
 c = conn.cursor()
 c.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
+
+working_dir = os.getcwd()
+if 'results' not in os.listdir('.'): os.mkdir('results')
+if 'validation' not in os.listdir('./results'): os.mkdir('results/validation')
+results_dir = os.path.join(working_dir, 'results')
+validation_dir = os.path.join(results_dir, 'validation')
+val_dirs = ['chains', 'milestone_chains']
+for dir in val_dirs:
+    if dir not in os.listdir(validation_dir): os.mkdir(os.path.join(validation_dir, dir))
