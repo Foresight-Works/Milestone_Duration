@@ -15,10 +15,6 @@ conn_params = {'host': 'localhost', 'user': user, 'password': password, 'databas
 conn = mysql_con.connect(**conn_params, allow_local_infile = True)
 c = conn.cursor()
 
-from sqlalchemy import create_engine
-engine = create_engine('mysql+pymysql://{u}:{p}@localhost/{db}' \
-                       .format(u=user, p=password, db=database))  #:5432
-
 def milestone_nodes(G, include_fin = True):
 	'''
 	:param G: Graph object
