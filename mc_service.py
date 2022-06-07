@@ -14,17 +14,10 @@ from zipfile import ZipFile
 conn_params = {'host': 'localhost', 'user':'rony', 'password':'exp8546$fs', 'database': 'MCdb'}
 conn = mysql.connect(**conn_params)
 c = conn.cursor()
-modules_dir = '/home/rony/Projects_Code/Milestones_Duration/modules'
-if modules_dir not in sys.path: sys.path.append(modules_dir)
-modules_dir = '/home/rony/Projects_Code/Cluster_Activities/modules'
-if modules_dir not in sys.path: sys.path.append(modules_dir)
-from nodes import *
-from milestones import *
-from paths import *
-from evaluate import *
-from parsers import *
-from utils import *
-from config import *
+from modules.nodes import *
+from modules.milestones import *
+from modules.paths import *
+from modules.config import *
 
 working_dir = os.getcwd()
 results_dir = os.path.join(working_dir, 'results')
