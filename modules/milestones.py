@@ -9,6 +9,7 @@ import pandas as pd
 from concurrent.futures import ProcessPoolExecutor
 import time
 import mysql.connector as mysql_con
+from modules.utils import *
 
 user, password, database = 'rony', 'exp8546$fs', 'MCdb'
 conn_params = {'host': 'localhost', 'user': user, 'password': password, 'database': database}
@@ -99,7 +100,7 @@ def extend_chain(tail_successors_submitted):
 	return tail_successors
 
 def write_chains(chains, table_name, tmp_path, conn):
-	chains_to_write = []
+	extended_chains = []
 	for chain in chains:
 		#print('-----')
 		#print('chain       :', chain)
@@ -108,9 +109,9 @@ def write_chains(chains, table_name, tmp_path, conn):
 		chain = '-'.join(chain)
 		# print('str   joined:', chain)
 		# print(chain)
-		chains_to_write.append(chain)
-	chains_to_write = '\n'.join(chains_to_write)
-	with open(tmp_path, 'w') as f: f.write(chains_to_write)
+		extended_chains.append(chain)
+	extended_chains = '\n'.join(extended_chains)
+	with open(tmp_path, 'w') as f: f.write(extended_chains)
 	statement = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE {tn} LINES TERMINATED BY '\n'".format(
 		tp=tmp_path, tn=table_name)
 	c.execute(statement)
@@ -142,35 +143,6 @@ def get_tasks_types(chains, ids_types, hash_nodes_map):
 	return (chains_tasks_types)
 
 
-def prep_write(chains, num_executors, tmp_path, ids_types, hash_nodes_map, conn):
-	'''
-	Collect and write the extended chains, filter the extended chains for milsetone chains, and write the milestone
-	chains
-	:param chains:
-	:param num_executors:
-	:param tmp_path:
-	:param ids_types:
-	:param hash_nodes_map:
-	:return:
-	'''
-	executor2 = ProcessPoolExecutor(num_executors)
-	## Write chains for the next iteration
-	write_chains(chains, 'chains', tmp_path, conn)
-	# Identify the type of each task in the chains identified
-	chains_tasks_types = get_tasks_types(chains, ids_types, hash_nodes_map)
-	## Filter tasks chains
-	milestone_chains = []
-	# Parallelized
-	for chain2, confirm in executor2.map(is_milestones_chain, chains_tasks_types):
-	#for chain2, confirm in map(is_milestones_chain, chains_tasks_types):
-		if confirm:
-			nodes_str =''.join(chain2)
-			milestone_chains.append(nodes_str)
-	executor2.shutdown()
-	## Write results: milestone chains
-	write_chains(milestone_chains, 'milestone_chains', tmp_path, conn)
-	return milestone_chains
-
 
 def strings_floats_hash(strings):
 	'''
@@ -196,7 +168,7 @@ def build_ids_types(G):
 	ids_types = dict(zip(Gnodes, tasks_types))
 	return ids_types
 
-def get_successors_types(node, successors, edges_types):
+def get_successors_links(node, successors, edges_types):
 	'''
 	Identify the types of links between a node and each of its successors
 	:param node (list): A graph node name
@@ -204,12 +176,33 @@ def get_successors_types(node, successors, edges_types):
 	:param edges_types(dict): The list of link types per edge keyed by a tuple of the nodes connected by this edge
 	:return: A dictionary of link types per successor keyed by (node, successor) tuple
 	'''
-	successors_types = {}
+
+	successors_links = {}
 	for successor in successors:
 		pair = (node, successor)
-		successors_types[pair] = edges_types[pair]
-	return successors_types
+		successors_links[successor] = edges_types[pair]
+	return successors_links
 
+
+def prep_write(chains, num_executors, tmp_path, ids_types, hash_nodes_map, conn):
+
+	# Write chains for the next iteration
+	write_chains(chains, 'chains', tmp_path, conn)
+	# Identify the type of each task in the chains identified
+	chains_tasks_types = get_tasks_types(chains, ids_types, hash_nodes_map)
+	## Filter tasks chains
+	milestone_chains = []
+	# Parallelized
+	executor2 = ProcessPoolExecutor(num_executors)
+	for chain2, confirm in executor2.map(is_milestones_chain, chains_tasks_types):
+		# for chain2, confirm in map(is_milestones_chain, chains_tasks_types):
+		if confirm:
+			nodes_str = ''.join(chain2)
+			milestone_chains.append(nodes_str)
+	executor2.shutdown()
+	## Write results: milestone chains
+	write_chains(milestone_chains, 'milestone_chains', tmp_path, conn)
+	return milestone_chains
 
 def root_chains(G, conn):
 	'''
@@ -253,7 +246,7 @@ def root_chains(G, conn):
 		num_executors = 6
 		executor1 = ProcessPoolExecutor(num_executors)
 		mem_sizes = []
-		write_chunk, chains_produced_count, write_chunks_count = 10000, 0, 0
+		chunk_size, chains_produced_count, chunk_sizes_count = 10000, 0, 0
 		print(50 * '=')
 		print('step {s}| {n1} nodes, of which {n2} were visited'.format(s=step, n1=nodes_count, n2=nodes_visited_count))
 		start = time.time()
@@ -262,8 +255,13 @@ def root_chains(G, conn):
 		chains_fetched = c.fetchall()
 		chains_fetched = [chain[0] for chain in chains_fetched]
 		chains = [re.split('-', chain) for chain in chains_fetched]
+		a = 5
 		for chain in chains: nodes_visited += chain
+
 		del chains_fetched
+		c.execute("DROP TABLE IF EXISTS chains;")
+		c.execute("CREATE TABLE IF NOT EXISTS chains (chain varchar(255));")
+
 		print('part 1 duration=', time.time()-start)
 
 		chains_count = len(chains)
@@ -277,19 +275,25 @@ def root_chains(G, conn):
 			chain = [float(t) for t in chain]
 			tail = chain[-1]
 			successors = list(G[tail].keys())
+			# Get tasks links
+			successors_links = get_successors_links(tail, successors, edges_types)
+			# todo: Filter successors that are not <FS> linked to the tail
+			successors = []
+			for successor, link in successors_links.items():
+				if link == 'FS': successors.append(successor)
 			tail_successors_submit.append((tail, successors))
 			tails_chains_dict[tuple(chain)] = tail
-
+			a = 4
 		#mem_size = sys.getsizeof(successors)
 		#print('chains memory size = {c} bytes'.format(c=mem_size))
-		del chains
+		#del chains
 		print('part 2 duration=', time.time() - start)
 		# Extend chains using the last node successors of each
 		print('part3: chains extensions by node children'.format(n=chains_count))
 		start = time.time()
-		chains_to_write = []
 		for tails_chains in executor1.map(extend_chain, tail_successors_submit):
 		#for tails_chains in map(extend_chain, tail_successors_submit):
+			extended_chains = []
 			mem = psutil.virtual_memory().percent
 			mem_sizes.append(mem)
 			chains_produced_count += len(tails_chains)
@@ -299,28 +303,34 @@ def root_chains(G, conn):
 				chains_to_extend = {k for k, v in tails_chains_dict.items() if v == tail}
 				for chain_to_extend in chains_to_extend:
 					extended_chain = list(chain_to_extend) + list(chain)
-					chains_to_write.append(extended_chain)
-			# Write chains
+					extended_chains.append(extended_chain)
+			# Filter overlapping chains
 			del tails_chains
-			Xn = len(chains_to_write)
-			if Xn >= write_chunk:
-				write_chunks_count += 1
-				print('writing chunk {n}'.format(n=write_chunks_count))
-				milestone_chains = prep_write(chains_to_write, num_executors,\
+			Xn = len(extended_chains)
+			chunks_count = int(Xn/chunk_size)
+			#print('{n} chains to write in {nc} chunks'.format(n=Xn, nc=chunks_count+1))
+			while Xn >= chunk_size:
+				chunk_sizes_count += 1
+				chunk = extended_chains[:chunk_size]
+				#start = time.time()
+				milestone_chains = prep_write(chunk, num_executors,\
 				                              tmp_path, ids_types, hash_nodes_map, conn)
+				#write_duration('writing chunk {n}'.format(n=chunk_sizes_count), start)
 				milestones_chain_count += len(milestone_chains)
-				chains_to_write = []
-		if write_chunks_count > 0:
-			print('{n1} chains produced, written in {nc} write_chunks'.format(n1=chains_produced_count, nc=write_chunks_count))
-		if Xn > 0:
-			print('writing {n} successor chains that were not written in write_chunks'.format(n=Xn))
-			milestone_chains = prep_write(chains_to_write, num_executors,\
-			                              tmp_path, ids_types, hash_nodes_map, conn)
-			milestones_chain_count += len(milestone_chains)
-		del chains_to_write #, milestone_chains
+				extended_chains = extended_chains[chunk_size:]
+				Xn = len(extended_chains)
+			if Xn > 0:
+				# Write chains for the next iteration
+				#start = time.time()
+				milestone_chains = prep_write(extended_chains, num_executors,\
+				                              tmp_path, ids_types, hash_nodes_map, conn)
+				#write_duration('writing the remaining {n} chains'.format(n=Xn), start)
+				milestones_chain_count += len(milestone_chains)
+
+		executor1.shutdown()
+		del extended_chains #, milestone_chains
 		mean_mem = np.mean(np.array(mem_sizes))
 		print('mean memory used percentage=', mean_mem)
-		executor1.shutdown()
 		print('part 3 duration=', time.time() - start)
 		nodes_visited_count = len(set(nodes_visited))
 		print('{n} nodes visited'.format(n=nodes_visited_count))
@@ -328,10 +338,10 @@ def root_chains(G, conn):
 		print('iteration duration=', iteration_duration)
 		print('{n} milestone chains identified'.format(n=milestones_chain_count))
 
-		# Validation results
-		# c.execute("SELECT chain FROM milestone_chains;".format(v=root_node))
-		# milestone_chains = '\n'.join([i[0] for i in c.fetchall()])
-		# with open('./results/validation/milestone_chains/step_{s}.txt'.format(s=step), 'w') as f: f.write(milestone_chains)
+		# Validation
+		c.execute("SELECT chain FROM milestone_chains;".format(v=root_node))
+		milestone_chains = '\n'.join([i[0] for i in c.fetchall()])
+		with open('./results/validation/milestone_chains/step_{s}.txt'.format(s=step), 'w') as f: f.write(milestone_chains)
 
 		c.execute("SELECT chain FROM chains;".format(v=root_node))
 		chains_read = [(i[0]) for i in c.fetchall()]

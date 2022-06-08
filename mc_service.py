@@ -66,7 +66,6 @@ def run_service():
 					print(e)
 					index += 1
 
-
 	# Graph
 	file_path = 'tmp.graphml'
 	with open(file_path, 'w') as f: f.write(graphml_str)
@@ -89,7 +88,6 @@ def run_service():
 	print("Root chains start:", datetime.now().strftime("%H:%M:%S"))
 	root_chains(G, conn)
 	write_duration('Milestone chains', start)
-
 	# Read milestone chains
 	c.execute("SELECT chain FROM milestone_chains;")
 	chains = c.fetchall()
