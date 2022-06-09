@@ -86,7 +86,7 @@ def run_service():
 	print('Milestone chains')
 	start = time.time()
 	print("Root chains start:", datetime.now().strftime("%H:%M:%S"))
-	root_chains(G, conn)
+	root_chains(G, conn, num_executors)
 	write_duration('Milestone chains', start)
 	# Read milestone chains
 	c.execute("SELECT chain FROM milestone_chains;")

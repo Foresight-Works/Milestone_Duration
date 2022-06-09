@@ -182,7 +182,7 @@ def get_successors_links(node, successors, edges_types):
 	return successors_links
 
 
-def root_chains(G, conn):
+def root_chains(G, conn, num_executors):
 	'''
 	Identify node chains in a directed graph that start from the root node
 	:param G: DiGraph object
@@ -220,7 +220,6 @@ def root_chains(G, conn):
 		# Step params
 		start1 = time.time()
 		step += 1
-		num_executors = 6
 		executor1 = ProcessPoolExecutor(num_executors)
 		mem_sizes = []
 		chunk_size, chains_produced_count, chunk_sizes_count = 10000, 0, 0

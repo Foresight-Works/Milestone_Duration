@@ -3,7 +3,7 @@ data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
 
 ## Server
 serviceLocation = 'Local'
-num_executors = 6
+num_executors = 40
 locationIP = {'Local': '0.0.0.0', 'Remote': '172.31.15.123'}
 locationPort = {'Local': 6002, 'Remote': 5000}
 serviceIP = locationIP[serviceLocation]
