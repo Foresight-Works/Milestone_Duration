@@ -70,6 +70,12 @@ def run_service():
 	file_path = 'tmp.graphml'
 	with open(file_path, 'w') as f: f.write(graphml_str)
 	G = nx.read_graphml(file_path)
+
+	# Rebuild the graph from edges to exclude isolates
+	nodes_degrees = dict(G.degree())
+	isolates = [n for n in list(nodes_degrees.keys()) if nodes_degrees[n]==0]
+	for isolate in isolates: G.remove_node(isolate)
+	###
 	G = nx.DiGraph(G)
 	os.remove(file_path)
 	print(count_node_types(G))

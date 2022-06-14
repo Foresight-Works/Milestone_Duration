@@ -37,21 +37,12 @@ def milestones_pairs_duration(milestone_paths, planned_duration, ids_names):
 	def milestones_pair_duration(pair_tasks):
 		milestones_pair, inter_milestone_tasks = pair_tasks
 		milestone_duration = 0
-		# start_str = 60 * '='
-		# print(60*'=')
-		# print('Milestones:', milestones_pair)
-		# write_str = '{s}\nMilestones: {mp}\n'.format(s=start_str, mp=milestones_pair)
 		tasks_duration = {}
 		for task_id in inter_milestone_tasks:
 			task_duration = planned_duration[task_id]
-			# print(task_id, task_duration)
-			#write_str += '\n{tid} | {td}'.format(tid=task_id, td=task_duration)
 			milestone_duration += task_duration
 			name_duraion = (ids_names[task_id], task_duration)
 			tasks_duration[task_id] = name_duraion
-		#write_str += '\nMilestone Duration={md}\n'.format(md=milestones_duration)
-		# print('Milestone Duration=', milestone_duration)
-		# with open('./results/milestone_paths.txt', 'a') as f: f.write(write_str)
 		duration_dict = {'milestone_duration': milestone_duration, 'tasks_duration': tasks_duration}
 		return pair_tasks, duration_dict
 
@@ -65,6 +56,64 @@ def milestones_pairs_duration(milestone_paths, planned_duration, ids_names):
 		milestones_duration[milestones_pair] = duration_dict
 
 	return milestones_duration
+
+from datetime import datetime
+def milestones_achievement_duration(chain, metadata_df):
+
+	'''
+	Calculate the achivement duration for the milestones in a milestone chain
+	Milestone Planned/Actual Duration: Planned/Actual achievement date for this milestone -
+										Planned/Actual achievement date for the previous milestone.
+	The start and end dates for each milestone in the chain,\
+	using either start or end dates as they are the same for milestone tasks
+	For the first milestone in the chain the value is NA.
+	:param metadata_df(DataFrame): The tasks metadata as extracted from a graphml file
+	:param chain (list): The tasks in a milestone path, starting from the first and ending
+	in the last miletstone in the chain
+	:return:
+	'''
+	date_format = "%d/%m/%Y"
+	milestones, milestones_dates = [], {}
+	for index, task_id in enumerate(chain):
+		task_type = metadata_df['TaskType'][metadata_df['ID'] == task_id].values
+		if task_type != 'TT_Task':
+			# Collect milestones
+			milestones.append(task_id)
+			# Achievement Dates for milestones
+			dates = tuple(metadata_df[['PlannedStart', 'ActualStart']][metadata_df['ID'] == task_id].values[0])
+			milestones_dates[task_id] = dates
+	
+	# Calculate milestone duration values
+	planned_duration_ms, actual_duation_ms = {}, {}
+	for index, task_id in enumerate(milestones):
+		# Values for the first milestone
+		if index == 0: planned_duration, actual_duration = None, None
+		else:
+			m1, m2 = milestones[index-1], milestones[index]
+			plannedm1, plannedm2 = datetime.strptime(milestones_dates[m1][0], date_format), \
+			                       datetime.strptime(milestones_dates[m2][0], date_format)
+			actualm1, actualm2 = datetime.strptime(milestones_dates[m1][1], date_format), \
+			                       datetime.strptime(milestones_dates[m2][1], date_format)
+			planned_duration = (plannedm2 - plannedm1).days
+			actual_duration = (actualm2 - actualm1).days
+		planned_duration_ms[task_id] = planned_duration
+		actual_duation_ms[task_id] = actual_duration
+
+	# Add None for TDAs
+	results = []
+	for index, task_id in enumerate(chain):
+		task_type = metadata_df['TaskType'][metadata_df['ID'] == task_id].values
+		if task_type == 'TT_Task':
+			planned_duration, actual_duration = None, None
+		else:
+			planned_duration, actual_duration = planned_duration_ms[task_id], \
+			                                    actual_duation_ms[task_id]
+		results.append((task_id,planned_duration, actual_duration))
+
+	results_df = pd.DataFrame(results, columns=['ID', 'Planned_MS_Duration', 'Actual_MS_Duration'])
+	results_df = pd.merge(results_df, metadata_df, how='left')
+	return results_df
+
 
 def is_milestones_chain(chain_ids_types, milestone_types=['TT_Mile', 'TT_FinMile']):
 	'''
@@ -109,9 +158,11 @@ def chains_to_strings(chains):
 		chain = chain_to_string(chain)
 		chains_str.append(chain)
 	return chains_str
-def write_chains(chains, table_name, tmp_path, conn):
-	extended_chains = chains_to_strings(chains)
-	extended_chains = '\n'.join(extended_chains)
+
+def write_chains(chains, table_name, tmp_path, conn, convert=True):
+	if convert:
+		chains = chains_to_strings(chains)
+	extended_chains = '\n'.join(chains)
 	with open(tmp_path, 'w') as f: f.write(extended_chains)
 	statement = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE {tn} LINES TERMINATED BY '\n'".format(
 		tp=tmp_path, tn=table_name)
@@ -143,17 +194,18 @@ def get_tasks_types(chains, ids_types):
 		chains_tasks_types.append((chain, nodes_types))
 	return (chains_tasks_types)
 
-def strings_floats_hash(strings):
+def numeric_kv(strings, use_floats=True):
 	'''
 	Hash strings as a floating point number
 	:param strings (list): A list of strings
 	:return: A dictionary of strings: flaoting point number
 	'''
 	mapping = {}
-	float_val = 0.0
+	if use_floats: numeric_val, increment, decimal = 0.0, 0.1, 2
+	else: numeric_val, increment, decimal = 0, 1, 0
 	for string in strings:
-		float_val = round(float_val + 0.1, 2)
-		mapping[string] = float_val
+		numeric_val = round(numeric_val + increment, decimal)
+		mapping[string] = numeric_val
 	return mapping
 
 def build_ids_types(G):
@@ -189,10 +241,7 @@ def root_chains(G, conn, num_executors):
 	:return: List of node chains
 	'''
 	Gnodes = G.nodes()
-	terminal_nodes = [x for x in Gnodes if G.out_degree(x) == 0 and G.in_degree(x) == 1]
-	print('terminal_nodes:', terminal_nodes)
-
-	nodes_hash_map = strings_floats_hash(Gnodes)
+	nodes_hash_map = numeric_kv(Gnodes)
 	hash_nodes_map = {v: k for k, v in nodes_hash_map.items()}
 	G = nx.relabel_nodes(G, nodes_hash_map)
 	ids_types = build_ids_types(G)
@@ -344,5 +393,6 @@ def select_milestone_chains(chains, num_executors, tmp_path, ids_types, hash_nod
 	milestone_chains = tasks_hash_to_ids(milestone_chains, hash_nodes_map)
 	milestone_chains = chains_to_strings(milestone_chains)
 	## Write results: milestone chains
-	write_chains(milestone_chains, 'milestone_chains', tmp_path, conn)
+	write_chains(milestone_chains, 'milestone_chains', tmp_path, conn, convert=False)
+
 	return milestone_chains

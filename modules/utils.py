@@ -1,6 +1,6 @@
 import time
 from modules.libraries import *
-from modules.config import *
+#from modules.config import *
 
 def build_result(data, clusters, names_col, ids_col):
     clustering_result = {}

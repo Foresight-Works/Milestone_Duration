@@ -30,18 +30,18 @@ from vizz import draw_graph
 # nx.write_adjlist(G, "./data/list_connected_nodes.adjlist")
 # draw_graph(G)
 
-# Branched directed graph
-G = nx.DiGraph()
-G_edges = [('N1', 'N2'), ('N2', 'N3'), ('N2', 'N4'), ('N2', 'N5'), ('N5', 'N6'),\
-           ('N1', 'N7'), ('N7', 'N8'), ('N8', 'N9'), ('N9', 'N10'), ('N10', 'N11'),\
-           ('N7', 'N12'), ('N12', 'N13'), ('N13', 'N14'), ('N13', 'N15'),\
-           ('N15', 'N16'), ('N15', 'N17')]
-G.add_edges_from(G_edges)
-root = list(nx.topological_sort(G))[0]
-print('root:', root)
-nx.write_edgelist(G, "./data/directed_branched_graph.edgelist")
-nt.from_nx(G)
-nt.show('./data/directed_branched_graph.html')
+## Branched directed graph
+# G = nx.DiGraph()
+# G_edges = [('N1', 'N2'), ('N2', 'N3'), ('N2', 'N4'), ('N2', 'N5'), ('N5', 'N6'),\
+#            ('N1', 'N7'), ('N7', 'N8'), ('N8', 'N9'), ('N9', 'N10'), ('N10', 'N11'),\
+#            ('N7', 'N12'), ('N12', 'N13'), ('N13', 'N14'), ('N13', 'N15'),\
+#            ('N15', 'N16'), ('N15', 'N17')]
+# G.add_edges_from(G_edges)
+# root = list(nx.topological_sort(G))[0]
+# print('root:', root)
+# nx.write_edgelist(G, "./data/directed_branched_graph.edgelist")
+# nt.from_nx(G)
+# nt.show('./data/directed_branched_graph.html')
 
 # G = nx.read_edgelist("directed_branched_graph.edgelist", create_using=nx.DiGraph())
 
@@ -55,3 +55,11 @@ nt.show('./data/directed_branched_graph.html')
 # nx.write_edgelist(G, "./data/small_directed_branched_graph.edgelist")
 # nt.from_nx(G)
 # nt.show('./data/small_directed_branched_graph.html')
+
+## Neighbors graph
+G = nx.DiGraph()
+G_edges = [('N7', 'N8'), ('N7', 'N12'), ('N7', 'N1')]
+G.add_edges_from(G_edges)
+nx.write_edgelist(G, "./results/neighbors_graph.edgelist")
+nt.from_nx(G)
+nt.show('./results/neighbors_graph.html')
