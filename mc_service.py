@@ -18,6 +18,7 @@ from modules.nodes import *
 from modules.milestones import *
 from modules.paths import *
 from modules.config import *
+from modules.splitgraph import *
 
 working_dir = os.getcwd()
 results_dir = os.path.join(working_dir, 'results')
@@ -75,7 +76,7 @@ def run_service():
 	nodes_degrees = dict(G.degree())
 	isolates = [n for n in list(nodes_degrees.keys()) if nodes_degrees[n]==0]
 	for isolate in isolates: G.remove_node(isolate)
-	###
+
 	G = nx.DiGraph(G)
 	os.remove(file_path)
 	print(count_node_types(G))
@@ -87,6 +88,17 @@ def run_service():
 	Gnodes_ser = pd.Series(Gnodes)
 	unique_nodes = Gnodes_ser.unique()
 	print('{n1} nodes | {n2} unique nodes'.format(n1=len(Gnodes), n2=len(unique_nodes)))
+
+	# Edges dependency
+	G = nx.DiGraph(G)
+	edges_dependency = {}
+	Gedges = G.edges(data=True)
+	for Gedge in Gedges:
+		edges_dependency[frozenset((Gedge[0], Gedge[1]))] = Gedge[2]['Dependency']
+
+	size_threshold = 50  # int(len(G.nodes)/15)
+	print('{n} graph nodes | size threshold = {t}'.format(n=len(G.nodes()), t=size_threshold))
+	partitions = split_graph(G, size_threshold)
 
 	# Milestone chains
 	print('Milestone chains')

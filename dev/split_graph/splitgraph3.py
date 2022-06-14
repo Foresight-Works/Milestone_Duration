@@ -36,15 +36,17 @@ def split_graph(G, size_threshold):
 	'''
 	# Edges per node
 	# todo: write/call nodes_edges_build as a function
-	nodes_edges = np.load('./results/nodes_edges.npy', allow_pickle=True)[()]
+	nodes_edges = np.load('nodes_edges.npy', allow_pickle=True)[()]
 	step, graphs, isolates, tracker, Gsource = 0, [], [], [], copy.deepcopy(G)
 	while list(G):
 		print(60*'*')
 		step += 1
+		# print('step:', step)
+		# print('{n} G nodes start:'.format(n=len(G.nodes())), G.nodes())
+		# # Remove isolates formed by nodes removal in the prevoius step
 		nodes_degrees = dict(G.degree())
 		step_isolates = [n for n in list(nodes_degrees.keys()) if nodes_degrees[n] == 0]
 		for isolate in step_isolates: G.remove_node(isolate)
-
 		# Keep step isolates to join to their neighbours on the partitions that will be built
 		isolates += step_isolates
 
@@ -55,16 +57,23 @@ def split_graph(G, size_threshold):
 		subgraph_size = len(NG.nodes())
 
 		# Clean graph of the nodes joined to a subgraph and isolates
-		joined_isolates = list(NG.nodes()) + step_isolates
+		joined_isolates = list(NG.nodes()) #>+ step_isolates
 		Gbefore = len(G.nodes())
+		#nodes_remove = [n for n in joined_isolates if n in list(G.nodes())]
+		#for node_remove in nodes_remove: G.remove_node(node_remove)
+		#print('joined_isolates:', joined_isolates)
 		for node_remove in joined_isolates:
 			if node_remove in list(G.nodes()): G.remove_node(node_remove)
 		Gafter = len(G.nodes())
+		#nodes_remove = list(NG.nodes())
+		#for node_remove in nodes_remove: G.remove_node(node_remove)
+		#print('{n} G nodes end:'.format(n=len(G.nodes())), G.nodes())
+		# Iterations tracking parameters
 		tracker.append([step, subgraph_size, Gbefore, Gafter, len(joined_isolates), len(step_isolates)])
 
 	print('{n} isolates collected'.format(n=len(isolates)))
 	tracker_df = pd.DataFrame(tracker, columns=['step', 'subgraph_size', 'G_before', 'G_after', 'nodes_removed', 'isolates'])
-	tracker_df.to_excel('tracker7.xlsx', index=False)
+	tracker_df.to_excel('tracker6.xlsx', index=False)
 
 	# todo: merge isolates to sub-graphs
 	print('tracking isolates')

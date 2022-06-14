@@ -114,7 +114,6 @@ def milestones_achievement_duration(chain, metadata_df):
 	results_df = pd.merge(results_df, metadata_df, how='left')
 	return results_df
 
-
 def is_milestones_chain(chain_ids_types, milestone_types=['TT_Mile', 'TT_FinMile']):
 	'''
 	Identify a task chain as milestones chains (starts and end in a milestone)
@@ -249,7 +248,6 @@ def root_chains(G, conn, num_executors):
 	nodes_count = len(Gnodes)
 	print('{n2} unique edges between {n1} nodes'.format(n1=len(Gnodes), n2=len(set(Gedges))))
 	root_node = list(nx.topological_sort(G))[0]
-
 	Gedges = G.edges(data=True)
 	edges_types = {}
 	for Gedge in Gedges: edges_types[(Gedge[0], Gedge[1])] = Gedge[2]['Dependency']
@@ -368,7 +366,8 @@ def root_chains(G, conn, num_executors):
 		nodes_visited_count = len(set(nodes_visited))
 		iteration_duration = time.time()-start1
 		print('iteration duration=', iteration_duration)
-		
+
+	os.remove(tmp_path)
 	return True
 
 

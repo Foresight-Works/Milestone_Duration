@@ -3,7 +3,6 @@ import numpy as np
 import pandas as pd
 import random
 from scipy import stats
-
 from modules.splitgraph import *
 
 # params
@@ -17,8 +16,17 @@ nodes_degrees = dict(G.degree())
 isolates = [n for n in list(nodes_degrees.keys()) if nodes_degrees[n]==0]
 for isolate in isolates: G.remove_node(isolate)
 
+# Edges dependency
 G = nx.DiGraph(G)
-size_threshold = int(len(G.nodes)/10)
+edges_dependency = {}
+Gedges = G.edges(data=True)
+for Gedge in Gedges:
+	edges_dependency[frozenset((Gedge[0], Gedge[1]))] = Gedge[2]['Dependency']
+
+size_threshold = 50 # int(len(G.nodes)/15)
 print('{n} graph nodes | size threshold = {t}'.format(n=len(G.nodes()), t=size_threshold))
 partitions = split_graph(G, size_threshold)
-c = 0
+for index, partition in enumerate(partitions):
+	print(30*'--')
+	print(index, len(partition.nodes()), partition.nodes())
+	print(partition.edges())
