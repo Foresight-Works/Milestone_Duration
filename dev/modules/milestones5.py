@@ -264,137 +264,114 @@ def root_chains(G, conn, num_executors):
 	step = 0
 	tmp_path = os.path.join(os.getcwd(), 'chains_temp.txt')
 
-	# Split graph to partitions
 	size_threshold = 50  # int(len(G.nodes)/15)
 	print('{n} graph nodes | size threshold = {t}'.format(n=len(G.nodes()), t=size_threshold))
-	split_graphs = split_graph(G, size_threshold)
+	partitions = split_graph(G, size_threshold)
 
-	## Collect chains from partitions
-	partitions, chains = [], []
-	# Split connected components to partitions
-	for split_graph in split_graphs:
-		partitions += [split_graph.subgraph(c).copy() for c in nx.connected_components(G)]
+	nodes_visited, nodes_visited_count = [], 0
+	while nodes_visited_count != nodes_count:
+		# Step params
+		start1 = time.time()
+		step += 1
+		executor1 = ProcessPoolExecutor(num_executors)
+		mem_sizes = []
+		chunk_size, chains_produced_count, chunk_sizes_count = 10000, 0, 0
+		print(50 * '=')
+		print('step {s}| {n1} nodes, of which {n2} were visited'.format(s=step, n1=nodes_count, n2=nodes_visited_count))
+		start = time.time()
+		print('part1')
+		c.execute("SELECT chain FROM chains;".format(v=root_node))
+		chains_fetched = c.fetchall()
+		chains_fetched = [chain[0] for chain in chains_fetched]
+		chains = [re.split('<>', chain) for chain in chains_fetched]
+		a = 5
+		for chain in chains: nodes_visited += chain
 
-	# Single Chain Partitions
-	for partition in partitions:
-		Gdegrees = [n[1] for n in list(partition.degree())]
-		if max(Gdegrees) == 2:
-			chain = list(nx.topological_sort(partition))
-			chains.append(chain)
-			partitions.remove(partition)
+		del chains_fetched
+		c.execute("DROP TABLE IF EXISTS chains;")
+		c.execute("CREATE TABLE IF NOT EXISTS chains (chain varchar(255));")
+		print('step 1 duration=', time.time()-start)
 
+		chains_count = len(chains)
+		print('step 2: Tracking successors for {n} chains'.format(n=chains_count))
+		start = time.time()
 
-	# todo rebuild root chain as partitions iteration
-	for pIndex, G in enumerate(partitions):
-		print('partition', pIndex)
-		nodes_count = len(G.nodes())
-		nodes_visited, nodes_visited_count = [], 0
-		while nodes_visited_count != nodes_count:
-			# Step params
-			start1 = time.time()
-			step += 1
-			executor1 = ProcessPoolExecutor(num_executors)
-			mem_sizes = []
-			chunk_size, chains_produced_count, chunk_sizes_count = 10000, 0, 0
-			print(50 * '=')
-			print('step {s}| {n1} nodes, of which {n2} were visited'.format(s=step, n1=nodes_count, n2=nodes_visited_count))
-			start = time.time()
-			print('part1')
-			c.execute("SELECT chain FROM chains;".format(v=root_node))
-			chains_fetched = c.fetchall()
-			chains_fetched = [chain[0] for chain in chains_fetched]
-			chains = [re.split('<>', chain) for chain in chains_fetched]
-			a = 5
-			for chain in chains: nodes_visited += chain
+		# Collect the successor tasks for the last task in the chain
+		tail_successors_submit = []
+		tails_chains_dict = {}
+		for index, chain in enumerate(chains):
+			chain = [float(t) for t in chain]
+			tail = chain[-1]
+			successors = list(G[tail].keys())
+			# Get tasks links
+			successors_links = get_successors_links(tail, successors, edges_types)
+			# Filter successors that are not <FS> linked to the tail
+			successors = []
+			for successor, link in successors_links.items():
+				if link == 'FS': successors.append(successor)
+			tail_successors_submit.append((tail, successors))
+			tails_chains_dict[tuple(chain)] = tail
+			a = 4
+		#mem_size = sys.getsizeof(successors)
+		#print('chains memory size = {c} bytes'.format(c=mem_size))
+		del chains
+		print('step 2 duration=', time.time() - start)
+		# Extend chains using the last node successors of each
+		print('part 3: chains extensions by node children'.format(n=chains_count))
+		start = time.time()
+		extended_chains = []
+		for tails_chains in executor1.map(extend_chain, tail_successors_submit):
+		#for tails_chains in map(extend_chain, tail_successors_submit):
+			mem = psutil.virtual_memory().percent
+			mem_sizes.append(mem)
+			chains_produced_count += len(tails_chains)
+			# Concatenate a chain tail successors to it's chain
+			for tail_chain in tails_chains:
+				tail, chain = tail_chain[0], tail_chain[1:]
+				chains_to_extend = {k for k, v in tails_chains_dict.items() if v == tail}
+				for chain_to_extend in chains_to_extend:
+					extended_chain = list(chain_to_extend) + list(chain)
+					extended_chains.append(extended_chain)
+			# Filter overlapping chains
+			del tails_chains
+			Xn = len(extended_chains)
+			chunks_count = int(Xn/chunk_size)
+		write_duration('chains extension', start)
+		chains_validation = chains_to_strings(extended_chains)
+		chains_validation = '\n'.join(chains_validation)
+		with open('./results/validation/chains/step_{s}.txt'.format(s=step), 'w') as f:
+			f.write(chains_validation)
 
-			del chains_fetched
-			c.execute("DROP TABLE IF EXISTS chains;")
-			c.execute("CREATE TABLE IF NOT EXISTS chains (chain varchar(255));")
-			print('step 1 duration=', time.time()-start)
-
-			chains_count = len(chains)
-			print('step 2: Tracking successors for {n} chains'.format(n=chains_count))
-			start = time.time()
-
-			# Collect the successor tasks for the last task in the chain
-			tail_successors_submit = []
-			tails_chains_dict = {}
-			for index, chain in enumerate(chains):
-				chain = [float(t) for t in chain]
-				tail = chain[-1]
-				successors = list(G[tail].keys())
-				# Get tasks links
-				successors_links = get_successors_links(tail, successors, edges_types)
-				# Filter successors that are not <FS> linked to the tail
-				successors = []
-				for successor, link in successors_links.items():
-					if link == 'FS': successors.append(successor)
-				tail_successors_submit.append((tail, successors))
-				tails_chains_dict[tuple(chain)] = tail
-				a = 4
-			#mem_size = sys.getsizeof(successors)
-			#print('chains memory size = {c} bytes'.format(c=mem_size))
-			del chains
-			print('step 2 duration=', time.time() - start)
-			# Extend chains using the last node successors of each
-			print('part 3: chains extensions by node children'.format(n=chains_count))
-			start = time.time()
-			extended_chains = []
-			for tails_chains in executor1.map(extend_chain, tail_successors_submit):
-			#for tails_chains in map(extend_chain, tail_successors_submit):
-				mem = psutil.virtual_memory().percent
-				mem_sizes.append(mem)
-				chains_produced_count += len(tails_chains)
-				# Concatenate a chain tail successors to it's chain
-				for tail_chain in tails_chains:
-					tail, chain = tail_chain[0], tail_chain[1:]
-					chains_to_extend = {k for k, v in tails_chains_dict.items() if v == tail}
-					for chain_to_extend in chains_to_extend:
-						extended_chain = list(chain_to_extend) + list(chain)
-						extended_chains.append(extended_chain)
-				# Filter overlapping chains
-				del tails_chains
-				Xn = len(extended_chains)
-				chunks_count = int(Xn/chunk_size)
-			write_duration('chains extension', start)
-			chains_validation = chains_to_strings(extended_chains)
-			chains_validation = '\n'.join(chains_validation)
-			with open('./results/validation/chains/step_{s}.txt'.format(s=step), 'w') as f:
-				f.write(chains_validation)
-
-			# todo: pipeline stage: conccatenate chains across partitions
-
-			# todo: pipeline stage: milestone chains identification as a follow up to the chain building
-			# Keep milestone chains
-			print('Step 4: Select and write milestone chains')
-			start = time.time()
-			milestone_chains = select_milestone_chains \
-				(extended_chains, num_executors, tmp_path, ids_types, hash_nodes_map, conn)
-			write_duration('Milestones selection', start)
-			chains_validation = '\n'.join(milestone_chains)
-			with open('./results/validation/milestone_chains/step_{s}.txt'.format(s=step), 'w') as f:
-				f.write(chains_validation)
-			print('{n1} milestone chains selected from {n2} chains identified'.format(n1=len(milestone_chains), n2=Xn))
-			print('{n} chains will be written in {nc} chunks'.format(n=Xn, nc=chunks_count+1))
-			# Write chains for the next iteration
-			start = time.time()
-			while Xn >= chunk_size:
-				chunk_sizes_count += 1
-				chunk = extended_chains[:chunk_size]
-				write_chains(chunk, 'chains', tmp_path, conn)
-				extended_chains = extended_chains[chunk_size:]
-				Xn = len(extended_chains)
-			if Xn > 0:
-				write_chains(extended_chains, 'chains', tmp_path, conn)
-			del extended_chains
-			write_duration('writing chains', start)
-			executor1.shutdown()
-			mean_mem = np.mean(np.array(mem_sizes))
-			print('mean memory used percentage=', mean_mem)
-			print('step 3 duration=', time.time() - start)
-			nodes_visited_count = len(set(nodes_visited))
-			iteration_duration = time.time()-start1
-			print('iteration duration=', iteration_duration)
+		# Keep milestone chains
+		print ('Step 4: Select and write milestone chains')
+		start = time.time()
+		milestone_chains = select_milestone_chains \
+			(extended_chains, num_executors, tmp_path, ids_types, hash_nodes_map, conn)
+		write_duration('Milestones selection', start)
+		chains_validation = '\n'.join(milestone_chains)
+		with open('./results/validation/milestone_chains/step_{s}.txt'.format(s=step), 'w') as f:
+			f.write(chains_validation)
+		print('{n1} milestone chains selected from {n2} chains identified'.format(n1=len(milestone_chains), n2=Xn))
+		print('{n} chains will be written in {nc} chunks'.format(n=Xn, nc=chunks_count+1))
+		# Write chains for the next iteration
+		start = time.time()
+		while Xn >= chunk_size:
+			chunk_sizes_count += 1
+			chunk = extended_chains[:chunk_size]
+			write_chains(chunk, 'chains', tmp_path, conn)
+			extended_chains = extended_chains[chunk_size:]
+			Xn = len(extended_chains)
+		if Xn > 0:
+			write_chains(extended_chains, 'chains', tmp_path, conn)
+		del extended_chains
+		write_duration('writing chains', start)
+		executor1.shutdown()
+		mean_mem = np.mean(np.array(mem_sizes))
+		print('mean memory used percentage=', mean_mem)
+		print('step 3 duration=', time.time() - start)
+		nodes_visited_count = len(set(nodes_visited))
+		iteration_duration = time.time()-start1
+		print('iteration duration=', iteration_duration)
 
 	os.remove(tmp_path)
 	return True

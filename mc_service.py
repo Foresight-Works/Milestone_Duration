@@ -18,7 +18,6 @@ from modules.nodes import *
 from modules.milestones import *
 from modules.paths import *
 from modules.config import *
-from modules.splitgraph import *
 
 working_dir = os.getcwd()
 results_dir = os.path.join(working_dir, 'results')
@@ -95,10 +94,6 @@ def run_service():
 	Gedges = G.edges(data=True)
 	for Gedge in Gedges:
 		edges_dependency[frozenset((Gedge[0], Gedge[1]))] = Gedge[2]['Dependency']
-
-	size_threshold = 50  # int(len(G.nodes)/15)
-	print('{n} graph nodes | size threshold = {t}'.format(n=len(G.nodes()), t=size_threshold))
-	partitions = split_graph(G, size_threshold)
 
 	# Milestone chains
 	print('Milestone chains')
