@@ -37,7 +37,9 @@ def split_graph(G, size_threshold):
 	# Edges per node
 	# todo: write/call nodes_edges_build as a function
 	nodes_edges = np.load('./results/nodes_edges.npy', allow_pickle=True)[()]
-	step, graphs, isolates, tracker, Gsource = 0, [], [], [], copy.deepcopy(G)
+
+	# Build sub-graphs using G nodes
+	step, graphs, isolates, tracker, Gsource = 0, {}, [], [], copy.deepcopy(G)
 	while list(G):
 		print(60*'*')
 		step += 1
@@ -51,7 +53,7 @@ def split_graph(G, size_threshold):
 		# Build a graph using the first node that was not joined in a previous step
 		node = list(G.nodes())[0]
 		NG = buildNodeGraph(node, G, nodes_edges, size_threshold)
-		graphs.append(NG)
+		graphs[step] = NG
 		subgraph_size = len(NG.nodes())
 
 		# Clean graph of the nodes joined to a subgraph and isolates
@@ -66,21 +68,38 @@ def split_graph(G, size_threshold):
 	tracker_df = pd.DataFrame(tracker, columns=['step', 'subgraph_size', 'G_before', 'G_after', 'nodes_removed', 'isolates'])
 	tracker_df.to_excel('tracker7.xlsx', index=False)
 
-	# todo: merge isolates to sub-graphs
+	# Merge isolates to sub-graphs
 	print('tracking isolates')
-	graphs_isolates = []
-	for isolate in isolates:
-		neighbors = list(Gsource.neighbors(isolate)) + list(Gsource.predecessors(isolate))
-		for graph in graphs:
-			graph_edges = list(graph.edges())
-			graph_edges_list = list(set(list(itertools.chain.from_iterable(graph_edges))))
-			in_graph = set(graph_edges_list).intersection(set(neighbors))
-			if in_graph:
-				graph_edges.append((isolate, list(in_graph)[0]))
-				graph = nx.from_edgelist(graph_edges)
-				graphs_isolates.append(graph)
-				pass
-			else:
-				graphs_isolates.append(graph)
+	# for index, isolate in enumerate(isolates):
+	# 	neighbors = list(Gsource.neighbors(isolate)) + list(Gsource.predecessors(isolate))
+	# 	for step, graph in graphs.items():
+	# 		graph_edges = list(graph.edges())
+	# 		graph_edges_list = list(set(list(itertools.chain.from_iterable(graph_edges))))
+	# 		in_graph = set(graph_edges_list).intersection(set(neighbors))
+	# 		if in_graph:
+	# 			graph_edges.append((isolate, list(in_graph)[0]))
+	# 			graph = nx.from_edgelist(graph_edges)
+	# 			graphs[step] = graph
+	# 			pass
+	nodes = []
+	for step, graph in graphs.items(): nodes += list(graph.nodes())
+	nodes = list(set(nodes))
+	return graphs, isolates
 
-	return graphs
+
+from itertools import combinations
+from pyvis.network import Network
+nt = Network('100%', '100%')
+nt.set_options('''var options = {"nodes": {"size": 20, "shape": "triangle", "width":15,
+    "font.size":"2"}, "edges":{"width":1, "font.size":"0"}}''')
+
+def graph_to_chains(G):
+	#nt.from_nx(G)
+	#nt.show('sub_graph.html')
+	chains = []
+	Gdegrees = dict(G.degree())
+	outer_nodes = [n for n in Gdegrees.keys() if Gdegrees[n] == 1]
+	outer_nodes_combinations = list(itertools.combinations(outer_nodes, 2))
+	for nodes_comb in outer_nodes_combinations:
+		chains.append(list(nx.all_simple_paths(G, nodes_comb[0], nodes_comb[1]))[0])
+	return G, chains
