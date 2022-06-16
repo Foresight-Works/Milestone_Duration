@@ -1,4 +1,4 @@
-import time
+import os
 import networkx as nx
 import numpy as np
 import pandas as pd
@@ -9,7 +9,8 @@ from concurrent.futures import ProcessPoolExecutor
 from modules.splitgraph import *
 
 # params
-file_path = '/home/rony/Projects_Code/Milestones_Duration/data/MWH-06-UP#13_FSW_REV.graphml'
+file_path = os.path.join(os.getcwd(), 'data/MWH-06-UP#13_FSW_REV.graphml')
+print(file_path)
 
 # Graph
 G = nx.read_graphml(file_path)
