@@ -45,13 +45,13 @@ for step, partition in partitions1.items():
 print('Building Single Chains from {n} Partitions'.format(n=len(partitions)))
 start = time.time()
 partitions_chains = {}
-executor = ProcessPoolExecutor(6)
+executor = ProcessPoolExecutor(12)
 #for index, partition in enumerate(partitions):
 c = 0
 #partitions = list(partitions1.values())[:10]
 #partitions = partitions[:10]
 chains_count = 0
-for partition, partition_chains in +map(graph_to_chains, partitions):
+for partition, partition_chains in executor.map(graph_to_chains, partitions):
 	c += 1
 	print(c, partition)
 	partitions_chains[partition] = partition_chains

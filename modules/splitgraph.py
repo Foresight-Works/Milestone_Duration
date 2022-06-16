@@ -1,3 +1,4 @@
+import os
 import copy
 import networkx as nx
 import numpy as np
@@ -36,7 +37,8 @@ def split_graph(G, size_threshold):
 	'''
 	# Edges per node
 	# todo: write/call nodes_edges_build as a function
-	nodes_edges = np.load('./results/nodes_edges.npy', allow_pickle=True)[()]
+	dict_path = os.path.join(os.getcwd(), './results/nodes_edges.npy')
+	nodes_edges = np.load(dict_path, allow_pickle=True)[()]
 
 	# Build sub-graphs using G nodes
 	step, graphs, isolates, tracker, Gsource = 0, {}, [], [], copy.deepcopy(G)
