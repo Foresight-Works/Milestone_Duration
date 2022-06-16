@@ -37,7 +37,7 @@ def split_graph(G, size_threshold):
 	'''
 	# Edges per node
 	# todo: write/call nodes_edges_build as a function
-	dict_path = os.path.join(os.getcwd(), './results/nodes_edges.npy')
+	dict_path = os.path.join(os.getcwd(), 'results/nodes_edges.npy')
 	nodes_edges = np.load(dict_path, allow_pickle=True)[()]
 
 	# Build sub-graphs using G nodes
