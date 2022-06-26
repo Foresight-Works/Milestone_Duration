@@ -103,5 +103,22 @@ def graph_to_chains(G):
 	outer_nodes = [n for n in Gdegrees.keys() if Gdegrees[n] == 1]
 	outer_nodes_combinations = list(itertools.combinations(outer_nodes, 2))
 	for nodes_comb in outer_nodes_combinations:
-		chains.append(list(nx.all_simple_paths(G, nodes_comb[0], nodes_comb[1]))[0])
+		nodes_comb_chains = list(nx.all_simple_paths(G, nodes_comb[0], nodes_comb[1]))
+		for nodes_comb_chain in nodes_comb_chains:
+			chains.append(nodes_comb_chain)
 	return G, chains
+
+def single_chain_graph_to_chains(G):
+	chain = []
+	if len(G) == 2:
+		chain = list(G.nodes())
+	else:
+		max_degree = max([d[1] for d in G.degree()])
+		if max_degree == 2:
+			try:
+				chain = list(nx.topological_sort(G))
+			except nx.exception.NetworkXError:
+				Gdegrees = dict(G.degree())
+				outer_nodes = [n for n in Gdegrees.keys() if Gdegrees[n] == 1]
+				chain = list(nx.all_simple_paths(G, outer_nodes[0], outer_nodes[1]))[0]
+	return chain
