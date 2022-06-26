@@ -1,0 +1,80 @@
+<html>
+<head>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css" />
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"> </script>
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+
+<style type="text/css">
+
+        #mynetwork {
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            border: 1px solid lightgray;
+            position: relative;
+            float: left;
+        }
+
+        
+
+        
+
+        
+</style>
+
+</head>
+
+<body>
+<div id = "mynetwork"></div>
+
+
+<script type="text/javascript">
+
+    // initialize global variables.
+    var edges;
+    var nodes;
+    var network; 
+    var container;
+    var options, data;
+
+    
+    // This method is responsible for drawing the graph, returns the drawn network
+    function drawGraph() {
+        var container = document.getElementById('mynetwork');
+        
+        
+
+        // parsing and collecting nodes and edges from the python
+        nodes = new vis.DataSet([{"id": "MWH06.C4.E1360", "label": "MWH06.C4.E1360", "shape": "dot", "size": 10}, {"id": "MWH-06-04-L1CX-S", "label": "MWH-06-04-L1CX-S", "shape": "dot", "size": 10}, {"id": "MWH-06-04-L1CX-F", "label": "MWH-06-04-L1CX-F", "shape": "dot", "size": 10}, {"id": "MWH06-9752", "label": "MWH06-9752", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1380", "label": "MWH06.C4.E1380", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1370", "label": "MWH06.C4.E1370", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1390", "label": "MWH06.C4.E1390", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1280", "label": "MWH06.C4.E1280", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1340", "label": "MWH06.C4.E1340", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1310", "label": "MWH06.C4.E1310", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1350", "label": "MWH06.C4.E1350", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1010", "label": "MWH06.C4.E1010", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1090", "label": "MWH06.C4.E1090", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1020", "label": "MWH06.C4.E1020", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1110", "label": "MWH06.C4.E1110", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1150", "label": "MWH06.C4.E1150", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1250", "label": "MWH06.C4.E1250", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1170", "label": "MWH06.C4.E1170", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1270", "label": "MWH06.C4.E1270", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1190", "label": "MWH06.C4.E1190", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1050", "label": "MWH06.C4.E1050", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1210", "label": "MWH06.C4.E1210", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1070", "label": "MWH06.C4.E1070", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1410", "label": "MWH06.C4.E1410", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1450", "label": "MWH06.C4.E1450", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1430", "label": "MWH06.C4.E1430", "shape": "dot", "size": 10}, {"id": "MWH06.C4.E1470", "label": "MWH06.C4.E1470", "shape": "dot", "size": 10}, {"id": "MWH.06.M4010", "label": "MWH.06.M4010", "shape": "dot", "size": 10}, {"id": "MWH-06-04-ROJ-F", "label": "MWH-06-04-ROJ-F", "shape": "dot", "size": 10}, {"id": "MWH06.D6.C1.C3180", "label": "MWH06.D6.C1.C3180", "shape": "dot", "size": 10}, {"id": "MWH06-10334", "label": "MWH06-10334", "shape": "dot", "size": 10}, {"id": "MWH06-10511", "label": "MWH06-10511", "shape": "dot", "size": 10}, {"id": "MWH06-10473", "label": "MWH06-10473", "shape": "dot", "size": 10}, {"id": "MWH06.C1.C3360", "label": "MWH06.C1.C3360", "shape": "dot", "size": 10}, {"id": "MWH06-10265", "label": "MWH06-10265", "shape": "dot", "size": 10}, {"id": "MWH06.C1.Cx2030", "label": "MWH06.C1.Cx2030", "shape": "dot", "size": 10}, {"id": "MWH06-10530", "label": "MWH06-10530", "shape": "dot", "size": 10}, {"id": "MWH06.D6.C1.C4180", "label": "MWH06.D6.C1.C4180", "shape": "dot", "size": 10}, {"id": "MWH06-10333", "label": "MWH06-10333", "shape": "dot", "size": 10}, {"id": "MWH06-10512", "label": "MWH06-10512", "shape": "dot", "size": 10}, {"id": "MWH06-10474", "label": "MWH06-10474", "shape": "dot", "size": 10}, {"id": "MWH06.C1.C4360", "label": "MWH06.C1.C4360", "shape": "dot", "size": 10}, {"id": "MWH06-10146", "label": "MWH06-10146", "shape": "dot", "size": 10}, {"id": "MWH06.C1.Cx2050", "label": "MWH06.C1.Cx2050", "shape": "dot", "size": 10}, {"id": "MWH06-10162", "label": "MWH06-10162", "shape": "dot", "size": 10}, {"id": "MWH06-10163", "label": "MWH06-10163", "shape": "dot", "size": 10}, {"id": "MWH06-10256", "label": "MWH06-10256", "shape": "dot", "size": 10}, {"id": "MWH06-10161", "label": "MWH06-10161", "shape": "dot", "size": 10}, {"id": "MWH06-10224", "label": "MWH06-10224", "shape": "dot", "size": 10}, {"id": "MWH06-10506", "label": "MWH06-10506", "shape": "dot", "size": 10}, {"id": "MWH06-10523", "label": "MWH06-10523", "shape": "dot", "size": 10}, {"id": "MWH06-10555", "label": "MWH06-10555", "shape": "dot", "size": 10}, {"id": "MWH06.C4.C3420", "label": "MWH06.C4.C3420", "shape": "dot", "size": 10}, {"id": "MWH06.D6.C4.C3180", "label": "MWH06.D6.C4.C3180", "shape": "dot", "size": 10}, {"id": "MWH06.C4.Cx2030", "label": "MWH06.C4.Cx2030", "shape": "dot", "size": 10}]);
+        edges = new vis.DataSet([{"from": "MWH06.C4.E1360", "label": 1, "to": "MWH-06-04-L1CX-S", "weight": 1}, {"from": "MWH06.C4.E1360", "label": 1, "to": "MWH-06-04-L1CX-F", "weight": 1}, {"from": "MWH06.C4.E1360", "label": 1, "to": "MWH06-9752", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1380", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1370", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1390", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1280", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1340", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1310", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1350", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1010", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1090", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1020", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1110", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1150", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1250", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1170", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1270", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1190", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1050", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1210", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1070", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1410", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1450", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1430", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH06.C4.E1470", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH.06.M4010", "weight": 1}, {"from": "MWH-06-04-L1CX-S", "label": 1, "to": "MWH-06-04-ROJ-F", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1380", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1370", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1390", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1280", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1340", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1310", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1350", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1010", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1090", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1020", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1110", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1150", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1250", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1170", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1270", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1190", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1050", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1210", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1070", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1410", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1450", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1430", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH06.C4.E1470", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH.06.M4010", "weight": 1}, {"from": "MWH-06-04-L1CX-F", "label": 1, "to": "MWH-06-04-ROJ-F", "weight": 1}, {"from": "MWH06.D6.C1.C3180", "label": 1, "to": "MWH06-10334", "weight": 1}, {"from": "MWH06.D6.C1.C3180", "label": 1, "to": "MWH06-10511", "weight": 1}, {"from": "MWH06.D6.C1.C3180", "label": 1, "to": "MWH06-10473", "weight": 1}, {"from": "MWH06-10334", "label": 1, "to": "MWH06.C1.C3360", "weight": 1}, {"from": "MWH06-10334", "label": 1, "to": "MWH06-10265", "weight": 1}, {"from": "MWH06-10334", "label": 1, "to": "MWH06.C1.Cx2030", "weight": 1}, {"from": "MWH06-10334", "label": 1, "to": "MWH06-10511", "weight": 1}, {"from": "MWH06-10334", "label": 1, "to": "MWH06-10530", "weight": 1}, {"from": "MWH06-10511", "label": 1, "to": "MWH06.C1.C3360", "weight": 1}, {"from": "MWH06-10511", "label": 1, "to": "MWH06-10473", "weight": 1}, {"from": "MWH06-10511", "label": 1, "to": "MWH06.C1.Cx2030", "weight": 1}, {"from": "MWH06-10511", "label": 1, "to": "MWH06-10530", "weight": 1}, {"from": "MWH06.D6.C1.C4180", "label": 1, "to": "MWH06-10333", "weight": 1}, {"from": "MWH06.D6.C1.C4180", "label": 1, "to": "MWH06-10512", "weight": 1}, {"from": "MWH06.D6.C1.C4180", "label": 1, "to": "MWH06-10474", "weight": 1}, {"from": "MWH06-10333", "label": 1, "to": "MWH06.C1.C4360", "weight": 1}, {"from": "MWH06-10333", "label": 1, "to": "MWH06-10146", "weight": 1}, {"from": "MWH06-10333", "label": 1, "to": "MWH06.C1.Cx2050", "weight": 1}, {"from": "MWH06-10333", "label": 1, "to": "MWH06-10512", "weight": 1}, {"from": "MWH06-10333", "label": 1, "to": "MWH06-10530", "weight": 1}, {"from": "MWH06-10512", "label": 1, "to": "MWH06.C1.C4360", "weight": 1}, {"from": "MWH06-10512", "label": 1, "to": "MWH06-10474", "weight": 1}, {"from": "MWH06-10512", "label": 1, "to": "MWH06.C1.Cx2050", "weight": 1}, {"from": "MWH06-10512", "label": 1, "to": "MWH06-10530", "weight": 1}, {"from": "MWH06-10162", "label": 1, "to": "MWH06-10163", "weight": 1}, {"from": "MWH06-10162", "label": 1, "to": "MWH06-10256", "weight": 1}, {"from": "MWH06-10163", "label": 1, "to": "MWH06-10161", "weight": 1}, {"from": "MWH06-10163", "label": 1, "to": "MWH06-10256", "weight": 1}, {"from": "MWH06-10224", "label": 1, "to": "MWH06-10506", "weight": 1}, {"from": "MWH06-10224", "label": 1, "to": "MWH06-10523", "weight": 1}, {"from": "MWH06-10224", "label": 1, "to": "MWH06-10555", "weight": 1}, {"from": "MWH06-10506", "label": 1, "to": "MWH06.C4.C3420", "weight": 1}, {"from": "MWH06-10506", "label": 1, "to": "MWH06.D6.C4.C3180", "weight": 1}, {"from": "MWH06-10506", "label": 1, "to": "MWH06.C4.Cx2030", "weight": 1}, {"from": "MWH06-10506", "label": 1, "to": "MWH06-10523", "weight": 1}, {"from": "MWH06-10506", "label": 1, "to": "MWH06-10530", "weight": 1}, {"from": "MWH06-10523", "label": 1, "to": "MWH06.C4.C3420", "weight": 1}, {"from": "MWH06-10523", "label": 1, "to": "MWH06.D6.C4.C3180", "weight": 1}, {"from": "MWH06-10523", "label": 1, "to": "MWH06.C4.Cx2030", "weight": 1}, {"from": "MWH06-10523", "label": 1, "to": "MWH06-10530", "weight": 1}]);
+
+        // adding nodes and edges to the graph
+        data = {nodes: nodes, edges: edges};
+
+        var options = {"nodes": {"size": 20, "shape": "triangle", "width": 15, "font.size": "2"}, "edges": {"width": 1, "font.size": "0"}};
+        
+        
+
+        
+
+        network = new vis.Network(container, data, options);
+	 
+        
+
+
+        
+
+        return network;
+
+    }
+
+    drawGraph();
+
+</script>
+</body>
+</html>

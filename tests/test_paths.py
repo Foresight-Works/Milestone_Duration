@@ -25,6 +25,7 @@ import collections
 # 	assert test_result == expected_result
 
 
+
 def test_list_connected_nodes():
 	data = nx.read_adjlist("./data/list_connected_nodes.adjlist")
 	node_ids = ['a', 'c', 'f', 'd', 'g', 'm', 'n']
