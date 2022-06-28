@@ -96,8 +96,10 @@ def has_cycle(G):
         res = True
         # return f"there is at least one cycle in the program \n Cycle:{cycle}", 400
     except nx.NetworkXNoCycle as cyc_ex:
-        print(cyc_ex)
-        cycle = None
+        #print(cyc_ex)
+        cycle = []
         res = False
         # raise RuntimeWarning('There are no cycles detected in the graph')
     return res, cycle
+
+

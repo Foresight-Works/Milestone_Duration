@@ -194,19 +194,6 @@ def get_tasks_types(chains, ids_types):
 		chains_tasks_types.append((chain, nodes_types))
 	return (chains_tasks_types)
 
-def numeric_kv(strings, use_floats=True):
-	'''
-	Hash strings as a floating point number
-	:param strings (list): A list of strings
-	:return: A dictionary of strings: flaoting point number
-	'''
-	mapping = {}
-	if use_floats: numeric_val, increment, decimal = 0.0, 0.1, 2
-	else: numeric_val, increment, decimal = 0, 1, 0
-	for string in strings:
-		numeric_val = round(numeric_val + increment, decimal)
-		mapping[string] = numeric_val
-	return mapping
 
 def build_ids_types(G):
 	'''
@@ -238,13 +225,13 @@ def root_chains(G, conn, num_executors):
 	'''
 	Identify node chains in a directed graph that start from the root node
 	:param G: DiGraph object
+	:param Gindex: The Graph object (for validation only)
 	:return: List of node chains
 	'''
 	Gnodes = G.nodes()
 	nodes_hash_map = numeric_kv(Gnodes)
 	hash_nodes_map = {v: k for k, v in nodes_hash_map.items()}
 	G = nx.relabel_nodes(G, nodes_hash_map)
-	ids_types = build_ids_types(G)
 	Gnodes, Gedges = G.nodes(), G.edges()
 	nodes_count = len(Gnodes)
 	print('{n2} unique edges between {n1} nodes'.format(n1=len(Gnodes), n2=len(set(Gedges))))
@@ -254,32 +241,102 @@ def root_chains(G, conn, num_executors):
 	for Gedge in Gedges: edges_types[(Gedge[0], Gedge[1])] = Gedge[2]['Dependency']
 
 	# Load root node
-	visited = [root_node]
 	c.execute("DROP TABLE IF EXISTS chains;")
 	c.execute("CREATE TABLE IF NOT EXISTS chains (chain varchar(255));")
 	c.execute("INSERT INTO chains (chain) values ('{v}')".format(v=root_node))
-	# todo: replace drop milestone_chains by creating a results table indexed by file name or id
-	c.execute("DROP TABLE IF EXISTS milestone_chains")
-	c.execute("CREATE TABLE IF NOT EXISTS milestone_chains (chain varchar(255))")
-	step = 0
 	tmp_path = os.path.join(os.getcwd(), 'chains_temp.txt')
+	nodes_visited, nodes_visited_count, milestones_chain_count = [], 0, 0
 
-	# Split graph to partitions
-	size_threshold = 50  # int(len(G.nodes)/15)
-	print('{n} graph nodes | size threshold = {t}'.format(n=len(G.nodes()), t=size_threshold))
-	split_graphs = split_graph(G, size_threshold)
+	step = 0
+	while nodes_visited_count != nodes_count:
+		# Step params
+		start1 = time.time()
+		step += 1
+		num_executors = 6
+		executor1 = ProcessPoolExecutor(num_executors)
+		mem_sizes = []
+		write_chunk, chains_produced_count, write_chunks_count = 10000, 0, 0
+		print(50 * '=')
+		print('step {s}| {n1} nodes, of which {n2} were visited'\
+		      .format(s=step, n1=nodes_count, n2=nodes_visited_count))
+		start = time.time()
+		print('part1')
+		c.execute("SELECT chain FROM chains;".format(v=root_node))
+		chains_fetched = c.fetchall()
+		chains_fetched = [chain[0] for chain in chains_fetched]
+		chains = [re.split('-', chain) for chain in chains_fetched]
+		for chain in chains: nodes_visited += chain
+		del chains_fetched
+		print('part 1 duration=', time.time()-start)
 
-	## Collect chains from partitions
-	partitions, chains = [], []
-	# Split connected components to partitions
-	for split_graph in split_graphs:
-		partitions += [split_graph.subgraph(c).copy() for c in nx.connected_components(G)]
-	# Single Chain Partitions
-	partitions_chains = {}
-	for partition in partitions:
-		partition_chains = graph_to_chains[partition]
-		partitions_chains[partition] = partition_chains
-	return True
+		chains_count = len(chains)
+		print('part2: Tracking successors for {n} chains'.format(n=chains_count))
+		start = time.time()
+
+		# Collect the successor tasks for the last task in the chain
+		tail_successors_submit = []
+		tails_chains_dict = {}
+		for index, chain in enumerate(chains):
+			chain = [float(t) for t in chain]
+			tail = chain[-1]
+			successors = list(G[tail].keys())
+			tail_successors_submit.append((tail, successors))
+			tails_chains_dict[tuple(chain)] = tail
+
+		#mem_size = sys.getsizeof(successors)
+		#print('chains memory size = {c} bytes'.format(c=mem_size))
+		del chains
+		print('part 2 duration=', time.time() - start)
+		# Extend chains using the last node successors of each
+		print('part3: chains extensions by node children'.format(n=chains_count))
+		start = time.time()
+		chains_to_write = []
+		for tails_chains in executor1.map(extend_chain, tail_successors_submit):
+		#for tails_chains in map(extend_chain, tail_successors_submit):
+			mem = psutil.virtual_memory().percent
+			mem_sizes.append(mem)
+			chains_produced_count += len(tails_chains)
+			# Concatenate a chain tail successors to it's chain
+			for tail_chain in tails_chains:
+				tail, chain = tail_chain[0], tail_chain[1:]
+				chains_to_extend = {k for k, v in tails_chains_dict.items() if v == tail}
+				for chain_to_extend in chains_to_extend:
+					extended_chain = list(chain_to_extend) + list(chain)
+					chains_to_write.append(extended_chain)
+
+		write_chains(chains, 'chains', tmp_path, conn)
+
+		del chains_to_write #, milestone_chains
+		mean_mem = np.mean(np.array(mem_sizes))
+		print('mean memory used percentage=', mean_mem)
+		executor1.shutdown()
+		print('part 3 duration=', time.time() - start)
+		nodes_visited_count = len(set(nodes_visited))
+		print('{n} nodes visited'.format(n=nodes_visited_count))
+		iteration_duration = time.time()-start1
+		print('iteration duration=', iteration_duration)
+		print('{n} milestone chains identified'.format(n=milestones_chain_count))
+
+		# Validation results
+		# c.execute("SELECT chain FROM milestone_chains;".format(v=root_node))
+		# milestone_chains = '\n'.join([i[0] for i in c.fetchall()])
+		# with open('./results/validation/milestone_chains/step_{s}.txt'.format(s=step), 'w') as f: f.write(milestone_chains)
+
+		# c.execute("SELECT chain FROM chains;".format(v=root_node))
+		# chains_read = [(i[0]) for i in c.fetchall()]
+		# chains = []
+		# for chain in chains_read:
+		# 	chain = '<>'.join([hash_nodes_map[float(t)] for t in chain.split('-')])
+		# 	chains.append(chain)
+		# chains_str = '\n'.join(chains)
+		# with open('./results/validation/chains/graph_{i}_step_{s}.txt'\
+		# 		          .format(i=Gindex, s=step), 'w') as f: f.write(chains_str)
+
+	c.execute("SELECT chain FROM chains;".format(v=root_node))
+	chains = [(i[0]) for i in c.fetchall()]
+
+	return chains
+
 
 
 def tasks_hash_to_ids(chains, hash_nodes_map):
@@ -290,6 +347,12 @@ def tasks_hash_to_ids(chains, hash_nodes_map):
 	return ids_chains
 
 def select_milestone_chains(chains, num_executors, tmp_path, ids_types, hash_nodes_map, conn):
+
+	# todo: replace drop milestone_chains by creating a results table indexed by file name or id
+	c.execute("DROP TABLE IF EXISTS milestone_chains")
+	c.execute("CREATE TABLE IF NOT EXISTS milestone_chains (chain varchar(255))")
+
+
 	# Identify the type of each task in the chains identified
 	chains_tasks_types = get_tasks_types(chains, ids_types)
 	## Filter tasks chains
@@ -306,3 +369,4 @@ def select_milestone_chains(chains, num_executors, tmp_path, ids_types, hash_nod
 	write_chains(milestone_chains, 'milestone_chains', tmp_path, conn, convert=False)
 
 	return milestone_chains
+

@@ -9,7 +9,7 @@ from scipy import stats
 from modules.splitgraph import *
 
 # params
-file_path = '/home/rony/Projects_Code/Milestones_Duration/data/MWH-06-UP#13_FSW_REV.graphml'
+file_path = './data/MWH-06-UP#13_FSW_REV.graphml'
 sparsity_threshold = 0.1
 
 # Graph
