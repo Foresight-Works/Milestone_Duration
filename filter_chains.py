@@ -8,25 +8,42 @@ from itertools import combinations
 import shutil
 import pandas as pd
 from modules.chains import *
+from modules.strings import *
 executor = ProcessPoolExecutor(6)
 results_path = '/home/rony/Projects_Code/Milestones_Duration/results/'
-pairs_dir = 'hashed_chains'
-pairs_path = os.path.join(results_path, pairs_dir)
-chunks_indices = [int(re.findall('\d{1,}', c)[0]) for c in os.listdir(pairs_path)]
+chains_path = '/home/rony/Projects_Code/Milestones_Duration/results/chains'
+filtered_chains_dir = 'filtered_chains'
+filtered_chains_path = os.path.join(results_path, filtered_chains_dir)
+chunks_indices = [int(re.findall('\d{1,}', c)[0]) for c in os.listdir(chains_path)]
+indices_paths = [(index, chains_path, filtered_chains_path) for index in chunks_indices]
 
 start = time.time()
-keep = []
 c = 0
-indices_paths = [(index, pairs_path) for index in chunks_indices]
+indices_paths = [(index, chains_path, filtered_chains_path) for index in chunks_indices]
+# todo: output as lists in text files, not as pickled chunks
+def chains_overlap(items_path):
+	start = time.time()
+	data_chunk_index, data_path, results_path = items_path
+	items = open(os.path.join(data_path, 'chunk{i}.txt'.format(i=data_chunk_index))).read().split('\n')
+	exclude = []
+	for i1 in items:
+		for i2 in items:
+			if i1 == i2:
+				exclude.append(i2)
+			else:
+				pair = [i1, i2]
+				if (any(y not in exclude for y in pair)):
+					overlap, shorter = pair_overlap(pair)
+					if overlap:
+						exclude.append(shorter)
+		a = 0
+	keep = [i for i in items if i not in exclude]
+	if keep:
+		keep = '\n'.join([str(c) for c in keep])
+		with open(os.path.join(results_path, 'chunk{c}.txt'.format(c=chunk_index)), 'w') as f: f.write(keep)
+	print('chains file filter duration=', time.time()-start)
+	return len(keep)
 
-for chunk_df in executor.map(chains_overlap, indices_paths):
-	#keep += chunk_keep
-	print(c, len(chunk_df))
-	if len(chunk_df) > 0:
-		c += 1
-
-print('{n1} chains in filtered list'.format(n1=len(keep)))
-print('chain filter duration=', time.time()-start)
-keep = '\n'.join(list(set(keep)))
-with open('./results/filtered_chains.txt', 'w') as f: f.write(keep)
-# shutil.rmtree(pairs_path, ignore_errors=True)
+for filtered_count in executor.map(chains_overlap, indices_paths):
+	c += 1
+	print(c, filtered_count)

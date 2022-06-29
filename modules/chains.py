@@ -47,7 +47,6 @@ def extend_chunk_pairs(index_path):
 		with open(os.path.join(results_path, 'chunk{c}.txt'.format(c=chunk_index)), 'w') as f: f.write(extended_chains)
 	return len(extended_chains)
 
-
 def dict_chains_to_chains(key_chains_dict):
 	chains = []
 	for node, pchains in key_chains_dict.items(): chains += pchains
@@ -103,30 +102,6 @@ def hash_chunk_chains(index_path):
 	hashed_pairs_df.to_pickle(os.path.join(hashed_chains_path, 'chunk{c}.pkl'.format(c=chunk_index)))
 
 	return hashed_pairs_df
-
-def chains_overlap(index_path):
-	chunk_index, pairs_path = index_path
-	chunk_exclude, chunk_keep, exclude_indices = [], [], []
-	pairs_df0 = pd.read_pickle(os.path.join(pairs_path, 'chunk{c}.pkl'.format(c=chunk_index)))
-	pairs = [tuple(p) for p in pairs_df0.values.tolist()]
-	for index, pair in enumerate(pairs):
-		p1, p2 = pair
-		if ((p1 not in chunk_exclude) & (p2 not in chunk_exclude)):
-			if p1 in p2:
-				exclude_indices.append(index)
-				chunk_keep.append(p1)
-			elif p2 in p1:
-				exclude_indices.append(index)
-				chunk_keep.append(p2)
-	pairs_df = pairs_df0[~pairs_df0.index.isin(exclude_indices)]
-	chunk_keep = list(set(chunk_keep))
-	keep_pairs = list(set(combinations(chunk_keep, 2)))
-	keep_pairs_df = pd.DataFrame(keep_pairs, columns=['p1', 'p2'])
-	pairs_df = pd.concat([pairs_df, keep_pairs_df])
-	if len(pairs_df) == 0:
-		print(pairs_df.head())
-	pairs_df.to_pickle(os.path.join(pairs_path, 'chunk{c}.pkl'.format(c=c)))
-	return pairs_df
 
 def pairs_chunks(items_path, chunk_size = 1000):
 	'''

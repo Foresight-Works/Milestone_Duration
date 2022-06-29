@@ -17,7 +17,8 @@ if pairs_dir in os.listdir(results_path):
 # todo: write/read chains.txt as chunk0.txt to the chains directory
 # chains = open('./results/chains.txt').read().split('\n')
 
-# todo: chains path set-up in config
+# todo dev: use hashed chains rather than chains, pairs to run after chains filter
+# todo integration: chains path set-up in config
 chains_path = '/home/rony/Projects_Code/Milestones_Duration/results/chains'
 chunks_indices = [int(re.findall('\d{1,}', c)[0]) for c in os.listdir(chains_path)]
 indices_paths = [(index, chains_path, pairs_path) for index in chunks_indices]
