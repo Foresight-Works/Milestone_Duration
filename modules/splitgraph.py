@@ -45,6 +45,7 @@ def single_chain_graph_to_chains(G):
 				outer_nodes = [n for n in Gdegrees.keys() if Gdegrees[n] == 1]
 				chain = list(nx.all_simple_paths(G, outer_nodes[0], outer_nodes[1]))[0]
 	return chain
+<<<<<<< HEAD
 
 from itertools import combinations
 def star_graph_to_chains(G):
@@ -67,3 +68,5 @@ def graph_to_chains(G):
 	return chains
 
 
+=======
+>>>>>>> 33dcea6ec28252087901b382f83211622ff27901

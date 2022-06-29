@@ -10,17 +10,16 @@ import pandas as pd
 from modules.chains import *
 executor = ProcessPoolExecutor(6)
 results_path = '/home/rony/Projects_Code/Milestones_Duration/results/'
-pairs_dir = 'pairs'
+pairs_dir = 'hashed_chains'
 pairs_path = os.path.join(results_path, pairs_dir)
 chunks_indices = [int(re.findall('\d{1,}', c)[0]) for c in os.listdir(pairs_path)]
 
 start = time.time()
 keep = []
 c = 0
+indices_paths = [(index, pairs_path) for index in chunks_indices]
 
-indices_path = [(index, pairs_path) for index in chunks_indices]
-
-for chunk_df in executor.map(indices_path, chunks_indices):
+for chunk_df in executor.map(chains_overlap, indices_paths):
 	#keep += chunk_keep
 	print(c, len(chunk_df))
 	if len(chunk_df) > 0:

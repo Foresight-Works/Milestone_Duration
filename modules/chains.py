@@ -2,37 +2,10 @@ from itertools import combinations
 import pandas as pd
 import os
 import re
+import time
 
-def extend_chains(a, b):
-	extended_chains = []
-	interecting_nodes = set(a).intersection(set(b))
-	for n in interecting_nodes:
-		extension1, extension2 = [], []
-		aindex, bindex = (a.index(n), b.index(n))
-		# If an intersecting node is a chains' start node
-		if aindex == 0:
-			a = a[1:]
-			extension1 = b + a
-		elif bindex == 0:
-			b = b[1:]
-			extension1 = a + b
-		# If an intersecting node is a chains' end node
-		elif aindex == len(a) -1:
-			a = a[:-1]
-			extension1 = a + b
-		elif bindex == len(b) -1:
-			b = b[:-1]
-			extension1 = b + a
-		# If an intersecting node is inside a chain
-		else:
-			extension1 = a[:aindex] + b[bindex:]
-			extension2 = b[:bindex] + a[aindex:]
-		extensions = [e for e in [extension1, extension2] if e]
-		extended_chains += extensions
-
-	return extended_chains
-# For parallelized calculation
-def extend_chains(pair):
+def extend_pair_chains(pair):
+	a, b = pair
 	extended_chains = []
 	interecting_nodes = set(a).intersection(set(b))
 	for n in interecting_nodes:
@@ -59,6 +32,21 @@ def extend_chains(pair):
 		extensions = [e for e in [extension1, extension2] if e]
 		extended_chains += extensions
 	return extended_chains
+
+def extend_chunk_pairs(index_path):
+	chunk_index, data_path, results_path = index_path
+	extended_chains, chunk_exclude, exclude_indices = [], [], []
+	pairs_df0 = pd.read_pickle(os.path.join(data_path, 'chunk{c}.pkl'.format(c=chunk_index)))
+	pairs = [tuple(p) for p in pairs_df0.values.tolist()]
+	for index, pair in enumerate(pairs):
+		extended_chains += extend_pair_chains(pair)
+		a=0
+	extended_chains = list(set(extended_chains))
+	if extended_chains:
+		extended_chains = '\n'.join([str(c) for c in extended_chains])
+		with open(os.path.join(results_path, 'chunk{c}.txt'.format(c=chunk_index)), 'w') as f: f.write(extended_chains)
+	return len(extended_chains)
+
 
 def dict_chains_to_chains(key_chains_dict):
 	chains = []
@@ -139,3 +127,23 @@ def chains_overlap(index_path):
 		print(pairs_df.head())
 	pairs_df.to_pickle(os.path.join(pairs_path, 'chunk{c}.pkl'.format(c=c)))
 	return pairs_df
+
+def pairs_chunks(items_path, chunk_size = 1000):
+	'''
+	Build chain pairs combination in chunks to avoid memory issues
+	:param items(list): The items to pair
+	'''
+	start = time.time()
+	data_chunk_index, chains_path, results_path = items_path
+	items = open(os.path.join(chains_path, 'chunk{i}.txt'.format(i=data_chunk_index))).read().split('\n')
+	chunk_index = data_chunk_index
+	while items:
+		chunk_index = round(chunk_index + 0.1, 4)
+		items_chunk = items[:chunk_size]
+		items = items[chunk_size:]
+		items_chunk_pairs = list(set(combinations(items_chunk, 2)))
+		chunk_df = pd.DataFrame(items_chunk_pairs, columns=['p1', 'p2'])
+		write_path = os.path.join(results_path, 'chunk{c}.pkl'.format(c=chunk_index))
+		chunk_df.to_pickle(write_path)
+	print('chunking duration=', time.time() - start)
+	return 'finished'

@@ -33,14 +33,6 @@ size_threshold = 50 # int(len(G.nodes)/15)
 nodes_degrees = dict(G.degree())
 source_isolates = [n for n in list(nodes_degrees.keys()) if nodes_degrees[n] == 0]
 
-# Edges dependency
-# edges_dependency = {}
-# for Gedge in Gedges:
-# 	edges_dependency[frozenset((Gedge[0], Gedge[1]))] = Gedge[2]['Dependency']
-# graph_no_isolates_nodes_count = len(set(G.nodes()))
-#
-# print('{n} graph nodes | size threshold = {t}'.format(n=len(G.nodes()), t=size_threshold))
-
 # Edges direction validation table
 # example: <edge id="MWH06-10609-MWH06-10608" source="MWH06-10609" target="MWH06-10608"> -> nodes as source and target
 graphml_edges = [l for l in open(file_path).read().split('\n') if 'edge id' in l]
