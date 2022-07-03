@@ -1,5 +1,9 @@
 import os
+
 data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
+experiment_id = 2
+data_file_name = 'MWH-06-UP#13_FSW_REV.graphml'
+partition_size_cutoff = 50
 
 ## Server
 serviceLocation = 'Local'
@@ -24,11 +28,10 @@ conn = mysql.connect(**conn_params)
 c = conn.cursor()
 c.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
 
+# Directories
 working_dir = os.getcwd()
-if 'results' not in os.listdir('.'): os.mkdir('results')
-if 'validation' not in os.listdir('./results'): os.mkdir('results/validation')
-results_dir = os.path.join(working_dir, 'results')
-validation_dir = os.path.join(results_dir, 'validation')
-val_dirs = ['chains', 'milestone_chains']
-for dir in val_dirs:
-    if dir not in os.listdir(validation_dir): os.mkdir(os.path.join(validation_dir, dir))
+data_path = os.path.join(os.getcwd(), 'data')
+file_path = os.path.join(data_path, data_file_name)
+results_path = os.path.join(working_dir, 'results')
+experiment_dir = 'experiment_{id}'.format(id=experiment_id)
+experiment_path = os.path.join(results_path, experiment_dir)

@@ -3,6 +3,58 @@ import pandas as pd
 import os
 import re
 import time
+import networkx as nx
+
+def chains_from_linear_graph(G):
+	chain = []
+	if len(G) == 2:
+		chain = list(G.nodes())
+	else:
+		max_degree = max([d[1] for d in G.degree()])
+		if max_degree == 2:
+			try:
+				chain = list(nx.topological_sort(G))
+			except nx.exception.NetworkXError:
+				Gdegrees = dict(G.degree())
+				outer_nodes = [n for n in Gdegrees.keys() if Gdegrees[n] == 1]
+				chain = list(nx.all_simple_paths(G, outer_nodes[0], outer_nodes[1]))[0]
+	return chain
+
+def chains_from_linear_graphs(indexed_graphs):
+	chains = {}
+	# Single-chain graphs
+	for index, graph in indexed_graphs.items():
+		chain = chains_from_linear_graph(graph)
+		if chain:
+			chains[index] = chain
+	return chains
+
+def chains_from_star_graph(G):
+	chains = []
+	Gdegrees = dict(G.degree())
+	outer_nodes = [n for n in Gdegrees.keys() if (Gdegrees[n] == 1)]
+	seed = [n for n in Gdegrees.keys() if (Gdegrees[n] > 1)]
+	outer_node_pairs = list(set(combinations(outer_nodes, 2)))
+	for p1, p2 in outer_node_pairs:
+		chains.append([p1, seed, p2])
+	return chains
+
+def chains_from_star_graphs(indexed_graphs, graph_size_cutoff):
+	star_chains = {}
+	for index, graph in indexed_graphs.items():
+		Gdegrees = dict(graph.degree())
+		max_node = [k for k, v in Gdegrees.items() if v > 1]
+		# Star signal: Only one node has more than one links
+		if len(max_node) == 1:
+			chains = chains_from_star_graph(graph)
+			if chains:
+				star_chains[index] = chains
+	return star_chains
+
+def nodes_chains(chains):
+	nodes = []
+	for chain in chains: nodes += chain
+	return nodes
 
 def extend_pair_chains(pair):
 	a, b = pair
@@ -52,7 +104,13 @@ def dict_chains_to_chains(key_chains_dict):
 	for node, pchains in key_chains_dict.items(): chains += pchains
 	return chains
 
+def chains_nodes_count(chains):
+	nodes = []
+	for chain in chains: nodes += chain
+	return (len(set(nodes)))
+
 def numeric_kv(strings, use_floats=True):
+
 	'''
 	Hash strings as a floating point number
 	:param strings (list): A list of strings

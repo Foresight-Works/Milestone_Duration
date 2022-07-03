@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 # Visualize
-def draw_graph(G):
+def draw_graph(G, file_path):
 	'''
 	Extension to networkx/matplotlib graph drawing function, adding node names and visual properties
 	:param G: Graph object
@@ -13,6 +13,11 @@ def draw_graph(G):
 	nx.draw_networkx_labels(G, pos)
 	nx.draw_networkx_edges(G, pos, edge_color='r')
 	nx.draw_networkx_edges(G, pos)
-	plt.show()
+	plt.savefig(file_path)
+
+def draw_graph(G, file_path):
+	fig, ax = plt.subplots(figsize=(15, 8))
+	nx.draw(G, with_labels=True, node_size=100)
+	plt.savefig(file_path)
 
 

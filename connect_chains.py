@@ -1,5 +1,3 @@
-# Filter a list of chains of overlapping chain
-# if b in a exclude b
 import re
 import time
 import os
