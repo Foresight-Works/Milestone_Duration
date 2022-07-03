@@ -1,9 +1,4 @@
 
-print('all remaining graphs')
-for index, partition in partitions.items():
-	#print(index, partition)
-	chains = graph_to_chains(partition)
-	partitions_chains[partition] = chains
 
 # Collect chains
 chains = []

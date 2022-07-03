@@ -1,3 +1,4 @@
+import time
 from itertools import combinations, product
 from modules.libraries import *
 from modules.splitgraph import *
@@ -10,66 +11,79 @@ def build_graph(file_path):
 	G = nx.DiGraph(G)
 	return G
 
-def graphs_nodes_count(graphs):
+def graphs_nodes(graphs):
 	nodes = []
 	for graph in graphs: nodes += list(graph.nodes())
-	return (len(set(nodes)))
+	return list(set(nodes))
 
 def graph_isolates(G):
 	nodes_degrees = dict(G.degree())
 	return [n for n in list(nodes_degrees.keys()) if nodes_degrees[n] == 0]
 
-def graph_pair_overlap(g1, g2):
-	# Clean partitions of overlapping chain-parts
-	mutual_edges = []
-	g1edges, g2edges = list(g1.edges()), list(g2.edges())
-	edges_combinations = list(product(g1edges, g2edges))
-	for edges_combination in edges_combinations:
-		if edges_combination[0] == edges_combination[1]:
-			mutual_edges.append(edges_combination[0])
-	return mutual_edges
+def graph_terminals(G):
+	nodes_degrees = dict(G.degree())
+	return [n for n in list(nodes_degrees.keys()) if nodes_degrees[n] == 1]
 
-def terminal_edge(g1index, g2index, g1, g2, mutual_edge):
-	result = -1
-	e1, e2 = mutual_edge
-	deg = dict(g1.degree())
-	e1deg, e2deg = deg[e1], deg[e2]
-	if ((e1deg == 2) & (e2deg == 1)): result = g1index
-	else:
-		deg = dict(g2.degree())
-		e1deg, e2deg = deg[e1], deg[e2]
-		if ((e1deg == 2) & (e2deg == 1)): result = g2index
-	return result
 
-def get_terminal_edges(g1index, g2index, g1, g2, mutual_edges):
-	graphs_edges = {}
-	indices_graphs = {g1index: g1, g2index: g2}
-	for mutual_edge in mutual_edges:
-		graph_to_clean_index = terminal_edge(g1index, g2index, g1, g2, mutual_edge)
-		if graph_to_clean_index != -1:
-			graphs_edges[graph_to_clean_index] = (indices_graphs[graph_to_clean_index], mutual_edge)
-	return graphs_edges
-#g1.remove_nodes_from([e1, e2])
+def build_terminals_graphs_dict(indexed_graphs):
+	nodes = graphs_nodes(list(indexed_graphs.values()))
+	terminals_graphs = {}
+	for node in nodes:
+		terminals_graphs[node] = []
+		for index, graph in indexed_graphs.items():
+			if node in graph_terminals(graph):
+				terminals_graphs[node].append(index)
+	terminals_graphs = {k: v for k, v in terminals_graphs.items() if len(v)>1}
+	return terminals_graphs
 
-def graph_pairs_overlap(indexed_graphs):
-	cleaned_graphs = {}
-	graph_pairs = list(set(combinations(list(indexed_graphs.keys()), 2)))
-	# Iterate graph pairs to identify overlaps by comparing their edges
-	for g1index, g2index in graph_pairs:
-		print(g1index, g2index)
-		g1, g2 = indexed_graphs[g1index], indexed_graphs[g2index]
-		# validation
-		val1, val2 = list(g1.edges()), list(g2.edges())
-		#draw_graph(g1, 'g1.png')
-		#draw_graph(g2, 'g2.png')
-		mutual_edges = graph_pair_overlap(g1, g2)
-		if mutual_edges:
-			graphs_edges = get_terminal_edges(g1index, g2index, g1, g2, mutual_edges)
-			for graph_index, graph_edge in graphs_edges.items():
-				graph, edge = graph_edge
-				nodes = [edge[0], edge[1]]
-				cleaned_graphs[graph_index] = graph.remove_nodes_from(nodes)
-	return cleaned_graphs
+def get_graph_terminals_to_crop(terminal, indices_graphs):
+	# Identify the largest graph containing the terminal
+	graphs_sizes = {index: len(graph.nodes()) for index, graph in indices_graphs.items()}
+	min_size = min(graphs_sizes.values())
+	min_sized_graph_index = [index for index, size in graphs_sizes.items() if size == min_size][0]
+	# Crop the terminal from all graphs which are larger than min_size
+	graphs_to_crop = {index: graph for index, graph in indices_graphs.items() if index != min_sized_graph_index}
+	graphs_terminals = []
+	for index, graph in graphs_to_crop.items():
+		graphs_terminals.append((index, terminal))
+		a = 0
+	return graphs_terminals
+
+def crop_terminals(indexed_graphs):
+	start = time.time()
+	terminals_graphs = build_terminals_graphs_dict(indexed_graphs)
+	print('terminal graphs duration, step 0=', round(time.time() - start))
+	step = 1
+	while len(terminals_graphs) > 0:
+		graph_terminals_collect = []
+		start = time.time()
+		for terminal, indices in terminals_graphs.items():
+			indices_graphs = {k: v for k, v in indexed_graphs.items() if k in indices}
+			graph_terminals_to_crop = get_graph_terminals_to_crop(terminal, indices_graphs)
+			graph_terminals_collect += graph_terminals_to_crop
+		a = 0
+		# Graph tuples to dictionary
+		graph_tuples_dict = {}
+		for graph_tuple in graph_terminals_collect:
+			graph_index, terminal = graph_tuple
+			if graph_index not in graph_tuples_dict.keys():
+				graph_tuples_dict[graph_index] = [terminal]
+			else:
+				graph_tuples_dict[graph_index].append(terminal)
+
+		# Remove terminals of graphs
+		for graph_index, terminals in graph_tuples_dict.items():
+			graph = indexed_graphs[graph_index]
+			# graph.remove_nodes_from(terminals)
+			for terminal in terminals: graph.remove_node(terminal)
+			indexed_graphs[graph_index] = graph
+			a = 0
+		start = time.time()
+		terminals_graphs = build_terminals_graphs_dict(indexed_graphs)
+		print('terminal graphs duration, step {s}='.format(s=step), round(time.time() - start))
+		step += 1
+	return indexed_graphs
+
 
 def predecessors_successors(file_path):
 	'''Edges direction validation table
