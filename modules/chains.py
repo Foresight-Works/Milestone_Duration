@@ -8,8 +8,8 @@ import networkx as nx
 def build_chains_terminals_dicts(chains):
 	chains_start, chains_end = {}, {}
 	for chain in chains:
-		chains_start[chain] = chain[0]
-		chains_end[chain] = chains[-1]
+		chains_start[tuple(chain)] = chain[0]
+		chains_end[tuple(chain)] = chain[-1]
 	return chains_start, chains_end
 
 def chains_from_linear_graph(G):
@@ -31,16 +31,17 @@ def chains_from_linear_graphs(indexed_graphs):
 	chains = {}
 	# Single-chain graphs
 	for index, graph in indexed_graphs.items():
-		chain = chains_from_linear_graph(graph)
-		if chain:
-			chains[index] = chain
+		if len(graph)>0:
+			chain = chains_from_linear_graph(graph)
+			if chain:
+				chains[index] = chain
 	return chains
 
 def chains_from_star_graph(G):
 	chains = []
 	Gdegrees = dict(G.degree())
 	outer_nodes = [n for n in Gdegrees.keys() if (Gdegrees[n] == 1)]
-	seed = [n for n in Gdegrees.keys() if (Gdegrees[n] > 1)]
+	seed = [n for n in Gdegrees.keys() if (Gdegrees[n] > 1)][0]
 	outer_node_pairs = list(set(combinations(outer_nodes, 2)))
 	for p1, p2 in outer_node_pairs:
 		chains.append([p1, seed, p2])
@@ -210,9 +211,33 @@ def extend_chain(tail_successors_submitted):
 	# edges_types = {}
 	# for Gedge in Gedges: edges_types[(Gedge[0], Gedge[1])] = Gedge[2]['Dependency']
 
-def write_chains(chains, path):
-	chains_str = '\n'.join([re.sub("\[|\]|\'", '', str(c)) for c in chains])
-	with open(path, 'w') as f: f.write(chains_str)
+
+def write_chains(chains, path, how='pickle'):
+	chains_to_str = []
+	for chain in chains:
+		if type(chain[0]) == list:
+			for c in chain:
+				chains_to_str.append(c)
+		else:
+			chains_to_str.append(chain)
+	if how == 'pickle':
+		chains_str = [re.sub("\[|\]|\'", '', str(c)) for c in chains_to_str]
+		chains_str = list(set(chains_str))
+		chains_df = pd.DataFrame(chains_str, columns=['chain'])
+		chains_df.to_pickle(path)
+		print('{p} chains written'.format(p=len(chains_str)))
+	elif how == 'text':
+		chains_str = '\n'.join([re.sub("\[|\]|\'", '', str(c)) for c in chains_to_str])
+		chains_str = list(set(chains_str))
+		with open(path, 'w') as f: f.write(chains_str)
+		print('{p} chains written'.format(p=len(chains_str)))
+
+def read_chains(path, how='pickle'):
+	if how == 'pickle':
+		chains = list(set(pd.read_pickle(path)['chain']))
+	elif how == 'text':
+		chains = open(path).read().split('\n')
+	return chains
 
 def root_chains(G):
 	'''
@@ -230,7 +255,7 @@ def root_chains(G):
 	print('{n2} unique edges between {n1} nodes'.format(n1=len(Gnodes), n2=len(set(Gedges))))
 	root_node = list(nx.topological_sort(G))[0]
 	chains = [[root_node]]
-	tmp_path = os.path.join(os.getcwd(), 'chains_temp.txt')
+	tmp_path = os.path.join(os.getcwd(), 'chains_temp.pkl')
 	write_chains(chains, tmp_path)
 
 	# Load root node
@@ -246,7 +271,7 @@ def root_chains(G):
 		print('step {s}| {n1} nodes, of which {n2} were visited'\
 		      .format(s=step, n1=nodes_count, n2=nodes_visited_count))
 
-		chains_fetched = open(tmp_path).read().split('\n')
+		chains_fetched = read_chains(tmp_path, how='pickle')
 		chains_fetched = [re.split(',', chain) for chain in chains_fetched]
 		for chain in chains_fetched:
 			chain = [n.rstrip().lstrip() for n in chain]
@@ -278,7 +303,7 @@ def root_chains(G):
 					extended_chain = list(chain_to_extend) + list(chain)
 					chains_to_write.append(extended_chain)
 
-		write_chains(chains_to_write, tmp_path)
+		write_chains(chains_to_write, tmp_path,  how='pickle')
 
 		del chains_to_write #, milestone_chains
 		nodes_visited_count = len(set(nodes_visited))
@@ -300,5 +325,5 @@ def root_chains(G):
 		# with open('./results/validation/chains/graph_{i}_step_{s}.txt'\
 		# 		          .format(i=Gindex, s=step), 'w') as f: f.write(chains_str)
 
-	chains = open(tmp_path).read().split('\n')
+	chains = read_chains(tmp_path, how='pickle')
 	return chains

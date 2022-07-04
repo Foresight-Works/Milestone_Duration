@@ -3,7 +3,7 @@ import copy
 import re
 import random
 import time
-from itertools import combinations
+from itertools import combinations, product
 import shutil
 from concurrent.futures import ProcessPoolExecutor
 import numpy as np
