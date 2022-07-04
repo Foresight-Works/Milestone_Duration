@@ -1,7 +1,7 @@
 import os
 
 data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
-experiment_id = 2
+experiment_id = 3
 data_file_name = 'MWH-06-UP#13_FSW_REV.graphml'
 partition_size_cutoff = 50
 

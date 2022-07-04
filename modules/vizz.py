@@ -15,14 +15,15 @@ def draw_graph(G, file_path):
 	nx.draw_networkx_edges(G, pos)
 	plt.savefig(file_path)
 
-def draw_graph(G, file_path, node_to_color):
+def draw_graph(G, file_path, node_to_color = None):
 	fig, ax = plt.subplots(figsize=(15, 15))
 	color_map = []
-	for node in G:
-		if node == node_to_color:
-			color_map.append('red')
-		else:
-			color_map.append('green')
+	if node_to_color:
+		for node in G:
+			if node == node_to_color:
+				color_map.append('red')
+			else:
+				color_map.append('green')
 	nx.draw(G, with_labels=True, node_color=color_map, node_size=100)
 	plt.savefig(file_path)
 

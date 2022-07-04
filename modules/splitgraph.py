@@ -31,12 +31,12 @@ def graph_to_chains(G):
 			chains.append(nodes_comb_chain)
 	return G, chains
 
-
 def graph_to_chains(G):
 	chains = []
 	Gdegrees = dict(G.degree())
 	outer_nodes = [n for n in Gdegrees.keys() if (Gdegrees[n] == 1)]
 	outer_node_pairs = list(set(combinations(outer_nodes, 2)))
 	for p1, p2 in outer_node_pairs:
-		chains += nx.all_simple_paths(G, p1, p2)
+		pair_chains = list(nx.all_simple_paths(G, p1, p2))
+		chains += pair_chains
 	return chains

@@ -24,14 +24,14 @@ simple_graph_chains_indices = list(simple_graph_chains.keys())
 for index in simple_graph_chains_indices:
 	del partitions[index]
 np.save(os.path.join(experiment_path, 'linear_partitions.npy'), simple_graph_chains)
-chains += simple_graph_chains
+chains += list(simple_graph_chains.values())
 simple_graph_chains = chains_from_star_graphs(partitions, partition_size_cutoff)
 simple_graph_chains_indices = list(simple_graph_chains.keys())
 for index in simple_graph_chains_indices:
 	del partitions[index]
 np.save(os.path.join(experiment_path, 'star_partitions.npy'), simple_graph_chains)
 np.save(os.path.join(experiment_path, 'partitions.npy'), partitions)
-chains += simple_graph_chains
+chains += list(simple_graph_chains.values())
 a = 0
 ## Crop overlapping terminal nodes ##
 # Clean partitions of overlapping sequences
@@ -57,36 +57,20 @@ results.to_excel('cropping.xlsx', index=False)
 
 # Check cropped for simple chains
 partitions = np.load(os.path.join(experiment_path, 'cropped.npy'), allow_pickle=True)[()]
+print('simple chains from cropped graphs')
 simple_graph_chains = chains_from_linear_graphs(partitions)
 simple_graph_chains_indices = list(simple_graph_chains.keys())
 for index in simple_graph_chains_indices:
 	del partitions[index]
 np.save(os.path.join(experiment_path, 'linear_partitions.npy'), simple_graph_chains)
-chains += simple_graph_chains
+chains += list(simple_graph_chains.values())
 simple_graph_chains = chains_from_star_graphs(partitions, partition_size_cutoff)
 simple_graph_chains_indices = list(simple_graph_chains.keys())
 for index in simple_graph_chains_indices:
 	del partitions[index]
 np.save(os.path.join(experiment_path, 'star_partitions.npy'), simple_graph_chains)
 np.save(os.path.join(experiment_path, 'partitions.npy'), partitions)
-chains += simple_graph_chains
+chains += list(simple_graph_chains.values())
+chains_str = '\n'.join(str(chain) for chain in chains)
+with open(os.path.join(experiment_path, 'chains.txt'), 'w') as f: f.write(chains_str)
 a = 0
-
-## Build chains from branched graphs
-for index, partition in partitions.items():
-	partition_chains = graph_to_chains(partition)
-	chains += partition_chains
-	a = 0
-a = 0
-
-## Connect chains
-edge_relations = predecessors_successors(file_path)
-predecessors, successors = list(edge_relations['predecessor']), list(edge_relations['successor'])
-zipper = dict(zip(predecessors, successors))
-
-
-
-
-
-
-

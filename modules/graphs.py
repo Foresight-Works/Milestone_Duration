@@ -24,7 +24,6 @@ def graph_terminals(G):
 	nodes_degrees = dict(G.degree())
 	return [n for n in list(nodes_degrees.keys()) if nodes_degrees[n] == 1]
 
-
 def build_terminals_graphs_dict(indexed_graphs):
 	nodes = graphs_nodes(list(indexed_graphs.values()))
 	terminals_graphs = {}

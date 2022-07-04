@@ -5,6 +5,13 @@ import re
 import time
 import networkx as nx
 
+def build_chains_terminals_dicts(chains):
+	chains_start, chains_end = {}, {}
+	for chain in chains:
+		chains_start[chain] = chain[0]
+		chains_end[chain] = chains[-1]
+	return chains_start, chains_end
+
 def chains_from_linear_graph(G):
 	chain = []
 	if len(G) == 2:
@@ -180,3 +187,118 @@ def pairs_chunks(items_path, chunk_size = 1000):
 		chunk_df.to_pickle(write_path)
 	print('chunking duration=', time.time() - start)
 	return 'finished'
+
+# Root chains and helpers
+def extend_chain(tail_successors_submitted):
+	'''
+	Extend a chain of nodes using the successors of the last node in the chain
+	:param successors(list): The chain to extend followed by a dictionary of link types for each combination of the last node in the chain and a successor
+	Example:
+	['MWH.06.M1000'], {('MWH.06.M1000', 'A1170'): 'FS', ('MWH.06.M1000', 'MWH06-2029'): 'FS', ('MWH.06.M1000', 'MWH06-2527'): 'FS', ('MWH.06.M1000', 'MWH06.D1.S1010'): 'FS'...}
+	:return:
+	'''
+	tail, successors = tail_successors_submitted
+	tail_successors = []
+	for successor in successors:
+		tail_successor = [tail, successor]
+		tail_successors.append(tail_successor)
+	return tail_successors
+
+# todo uild_edges_types and apply to the complete chains
+# def build_edges_types
+	# Gedges = G.edges(data=True)
+	# edges_types = {}
+	# for Gedge in Gedges: edges_types[(Gedge[0], Gedge[1])] = Gedge[2]['Dependency']
+
+def write_chains(chains, path):
+	chains_str = '\n'.join([re.sub("\[|\]|\'", '', str(c)) for c in chains])
+	with open(path, 'w') as f: f.write(chains_str)
+
+def root_chains(G):
+	'''
+	Identify node chains in a directed graph that start from the root node
+	:param G: DiGraph object
+	:param Gindex: The Graph object (for validation only)
+	:return: List of node chains
+	'''
+	Gnodes = G.nodes()
+	# nodes_hash_map = numeric_kv(Gnodes)
+	# hash_nodes_map = {v: k for k, v in nodes_hash_map.items()}
+	# G = nx.relabel_nodes(G, nodes_hash_map)
+	Gnodes, Gedges = G.nodes(), G.edges()
+	nodes_count = len(Gnodes)
+	print('{n2} unique edges between {n1} nodes'.format(n1=len(Gnodes), n2=len(set(Gedges))))
+	root_node = list(nx.topological_sort(G))[0]
+	chains = [[root_node]]
+	tmp_path = os.path.join(os.getcwd(), 'chains_temp.txt')
+	write_chains(chains, tmp_path)
+
+	# Load root node
+	nodes_visited, nodes_visited_count, milestones_chain_count = [], 0, 0
+
+	step = 0
+	while nodes_visited_count != nodes_count:
+		# Step params
+		start1 = time.time()
+		step += 1
+		write_chunk, chains_produced_count, write_chunks_count = 10000, 0, 0
+		print(50 * '=')
+		print('step {s}| {n1} nodes, of which {n2} were visited'\
+		      .format(s=step, n1=nodes_count, n2=nodes_visited_count))
+
+		chains_fetched = open(tmp_path).read().split('\n')
+		chains_fetched = [re.split(',', chain) for chain in chains_fetched]
+		for chain in chains_fetched:
+			chain = [n.rstrip().lstrip() for n in chain]
+			chains.append(chain)
+		for chain in chains:
+			nodes_visited += chain
+		del chains_fetched
+		chains_count = len(chains)
+		print('Tracking successors for {n} chains'.format(n=chains_count))
+
+		# Collect the successor tasks for the last task in the chain
+		tail_successors_submit = []
+		tails_chains_dict = {}
+		for index, chain in enumerate(chains):
+			tail = chain[-1]
+			successors = list(G[tail].keys())
+			tail_successors_submit.append((tail, successors))
+			tails_chains_dict[tuple(chain)] = tail
+
+		# Extend chains using the last node successors of each
+		chains_to_write = []
+		for tails_chains in map(extend_chain, tail_successors_submit):
+			chains_produced_count += len(tails_chains)
+			# Concatenate a chain tail successors to it's chain
+			for tail_chain in tails_chains:
+				tail, chain = tail_chain[0], tail_chain[1:]
+				chains_to_extend = [k for k, v in tails_chains_dict.items() if v == tail]
+				for chain_to_extend in chains_to_extend:
+					extended_chain = list(chain_to_extend) + list(chain)
+					chains_to_write.append(extended_chain)
+
+		write_chains(chains_to_write, tmp_path)
+
+		del chains_to_write #, milestone_chains
+		nodes_visited_count = len(set(nodes_visited))
+		print('{n} nodes visited'.format(n=nodes_visited_count))
+		print('iteration duration=', round(time.time()-start1))
+
+		# Validation results
+		# c.execute("SELECT chain FROM milestone_chains;".format(v=root_node))
+		# milestone_chains = '\n'.join([i[0] for i in c.fetchall()])
+		# with open('./results/validation/milestone_chains/step_{s}.txt'.format(s=step), 'w') as f: f.write(milestone_chains)
+
+		# c.execute("SELECT chain FROM chains;".format(v=root_node))
+		# chains_read = [(i[0]) for i in c.fetchall()]
+		# chains = []
+		# for chain in chains_read:
+		# 	chain = '<>'.join([hash_nodes_map[float(t)] for t in chain.split('-')])
+		# 	chains.append(chain)
+		# chains_str = '\n'.join(chains)
+		# with open('./results/validation/chains/graph_{i}_step_{s}.txt'\
+		# 		          .format(i=Gindex, s=step), 'w') as f: f.write(chains_str)
+
+	chains = open(tmp_path).read().split('\n')
+	return chains
