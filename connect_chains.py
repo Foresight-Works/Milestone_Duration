@@ -31,6 +31,7 @@ next_step = True
 chain_pairs = ['start']
 step = 0
 while chain_pairs:
+	step_connected_chains = []
 	step += 1
 	print(step, len(chains))
 	chains_start, chains_end = build_chains_terminals_dicts(chains)
@@ -45,9 +46,12 @@ while chain_pairs:
 		start_chains = [chain for chain, chain_end in chains_end.items() if chain_end == end_node]
 		end_chains = [chain for chain, chain_start in chains_start.items() if chain_start == start_node]
 		chain_pairs = list(x for x in itertools.product(start_chains, end_chains))
-		chain_pairs = [(chain[0]+chain[1]) for chain in chain_pairs]
-		chains += chain_pairs
+		connected_chains = [(chain[0]+chain[1]) for chain in chain_pairs]
+		chains += connected_chains
+		step_connected_chains += connected_chains
 		print(len(chains))
+	path = os.path.join(experiment_path, 'step{s}.pkl'.format(s=step))
+	write_chains(step_connected_chains, path)
 
 path = os.path.join(experiment_path, 'chains4.pkl')
 write_chains(chains, path)
