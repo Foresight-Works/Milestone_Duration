@@ -25,8 +25,8 @@ start = time.time()
 data_df = parse_graphml(file_name, graphml_str, headers)
 data_df.to_excel('./results/data_df.xlsx', index=False)
 planned_duration = activities_duration(data_df, 'planned')
-np.save('../results/old/planned_duration.npy', planned_duration)
-planned_duration = np.load('../results/old/planned_duration.npy', allow_pickle=True)[()]
+np.save('planned_duration.npy', planned_duration)
+planned_duration = np.load('planned_duration.npy', allow_pickle=True)[()]
 planned_duration_df = pd.DataFrame(list(zip(list(planned_duration.keys()), list(planned_duration.values()))), columns=['ID', 'planned_duration'])
 planned_duration_df.to_excel('./results/duration_df.xlsx', index=False)
 write_duration('Graphml parsing and duration calculation', start)
@@ -53,7 +53,7 @@ if 'milestone_paths.txt' in os.listdir('../results'): os.remove('./results/miles
 print('Calculating milestone durations')
 start = time.time()
 milestones_duration = milestones_pairs_duration(milestone_paths, planned_duration)
-np.save('../results/old/paired_milestones_duration.npy', milestones_duration)
+np.save('paired_milestones_duration.npy', milestones_duration)
 write_duration('Milestone pairs identification and duration calculation', start)
 
 print('Identify extended pairs and calculate their duration')
@@ -96,4 +96,4 @@ write_duration('Extended pairs identification and duration calculation', start)
 
 milestones_duration = {**milestones_duration, **extended_milestones_duration}
 #for k, v in milestones_duration.items(): print(k, v)
-np.save('../results/old/milestones_duration.npy', milestones_duration)
+np.save('milestones_duration.npy', milestones_duration)

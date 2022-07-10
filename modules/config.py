@@ -18,7 +18,6 @@ url = 'http://{ip}:{port}/cluster_analysis/api/v0.1/milestones'.format(ip=servic
 #server_db_params = {'Local': {'host': 'localhost', 'user':'rony', 'password': 'exp8546$fs', 'database': db_name},\
 #                    'Remote': {'host': serviceIP, 'user': 'researchUIuser', 'password':'query1234$fs', 'database': db_name}}
 import mysql.connector as mysql
-print('connecting to mysql')
 private_serviceIP = '172.31.15.123'
 user, password, db_name = 'rony', 'exp8546$fs', 'CAdb'
 server_db_params = {'Local': {'host': 'localhost', 'user': user, 'password': password, 'database': db_name},\

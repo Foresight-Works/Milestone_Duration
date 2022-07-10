@@ -56,10 +56,21 @@ from vizz import draw_graph
 # nt.from_nx(G)
 # nt.show('./data/small_directed_branched_graph.html')
 
-## Neighbors graph
+# ## Neighbors graph
+# G = nx.DiGraph()
+# G_edges = [('N7', 'N8'), ('N7', 'N12'), ('N7', 'N1')]
+# G.add_edges_from(G_edges)
+# nx.write_edgelist(G, "./results/neighbors_graph.edgelist")
+# nt.from_nx(G)
+# nt.show('./results/neighbors_graph.html')
+
+# # Worm walk graph
 G = nx.DiGraph()
-G_edges = [('N7', 'N8'), ('N7', 'N12'), ('N7', 'N1')]
+G_edges = [('N1', 'N2'), ('N2', 'N3'), ('N2', 'N4'), ('N2', 'N5'), ('N3', 'N6'),\
+           ('N3', 'N7'), ('N4', 'N8'), ('N4', 'N9')]
 G.add_edges_from(G_edges)
-nx.write_edgelist(G, "./results/neighbors_graph.edgelist")
+root = list(nx.topological_sort(G))[0]
+print('root:', root)
+nx.write_edgelist(G, "./data/worm_walk_demo.edgelist")
 nt.from_nx(G)
-nt.show('./results/neighbors_graph.html')
+nt.show('./data/worm_walk_demo.html')
