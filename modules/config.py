@@ -3,9 +3,11 @@ import sys
 from modules.db_tables import *
 from modules.libraries import *
 
-data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
+wd = os.getcwd()
+data_path = os.path.join(wd, 'data')
 experiment_id = 3
 data_file_name = 'MWH-06-UP#13_FSW_REV.graphml'
+file_path = os.path.join(data_path, data_file_name)
 partition_size_cutoff = 50
 
 ## Server

@@ -1,3 +1,5 @@
+import os
+
 from modules.config import *
 from modules.libraries import *
 from modules.graphs import *
@@ -6,7 +8,6 @@ from modules.worm_modules import *
 start = time.time()
 
 # Data
-file_path = '/home/rony/Projects_Code/Milestones_Duration/data/MWH-06-UP#13_FSW_REV.graphml'
 G = build_graph(file_path)
 
 #file_path = '/home/rony/Projects_Code/Milestones_Duration/tests/data/worm_walk_demo.edgelist'
@@ -69,7 +70,6 @@ while terminal_nodes_tracker:
 		chains_list = [chain[0] for chain in chains_fetched]
 		chains_count = len(chains_list)
 
-		#chains_list = list(pd.read_pickle(chains_path)['nodes'])
 		if chain_str not in chains_list:
 			chains_results_row = [wormIndex, chainIndex, chain_str]
 			#chains_results_rows.append([wormIndex, chainIndex, chain_str])

@@ -1,30 +1,27 @@
-import os
-import pandas as pd
-import networkx as nx
-import sys
-if '../modules' not in sys.path: sys.path.append('../modules')
-from graphs import *
-from worm_modules import *
+from modules.libraries import *
+from modules.parsers import *
+from modules.evaluate import *
+from modules.graphs import *
+from modules.worm_modules import *
+from modules.config import *
 
 # Data
-file_path = '/home/rony/Projects_Code/Milestones_Duration/data/MWH-06-UP#13_FSW_REV.graphml'
 G = build_graph(file_path)
 root_node = list(nx.topological_sort(G))[0]
 terminal_nodes = get_terminal_nodes(G)
 
-source_path = '/home/rony/Projects_Code/Milestones_Duration/results/validation/predecessors_successors.xlsx'
+source_path = os.path.join(results_path, 'validation', 'predecessors_successors.xlsx')
 source = pd.read_excel(source_path)
 source_pairs = list(zip(source['Predecessor'], source['Successor']))
 print('{n} source pairs; sample:'.format(n=len(source_pairs)), source_pairs[:10])
 
-chains_df_path = os.path.join('../results', 'chains.pkl')
-chains_df = pd.read_pickle(chains_df_path)
+chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
 chains = list(chains_df['nodes'])
 n1, n2 = len(chains), len(set(chains))
 print(chains_df.info())
 print('{n1} chains | {n2} unique chains'.format(n1=n1, n2=n2))
 
-chains_printout_path = os.path.join('../results', 'chains.txt')
+chains_printout_path = os.path.join(results_path, 'chains.txt')
 chains_str = '\n'.join(chains)
 with open(chains_printout_path, 'w') as f: f.write(chains_str)
 

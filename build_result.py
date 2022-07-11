@@ -1,22 +1,9 @@
-import sys
-
-import pandas as pd
-
-modules_dir = '/home/rony/Projects_Code/Milestones_Duration/modules'
-if modules_dir not in sys.path: sys.path.append(modules_dir)
-modules_dir = '/home/rony/Projects_Code/Cluster_Activities/modules'
-if modules_dir not in sys.path: sys.path.append(modules_dir)
-from libraries import *
-from parsers import *
-from evaluate import *
-from graphs import *
-from worm_modules import *
-
-# Paths
-file_path = '/home/rony/Projects_Code/Milestones_Duration/data/MWH-06-UP#13_FSW_REV.graphml'
-chains_df_path = os.path.join('/home/rony/Projects_Code/Milestones_Duration/results/chains.pkl')
-file_name = 'MWH-06-UP#13_FSW_REV.graphml'
-chains_printout_path = os.path.join('/home/rony/Projects_Code/Milestones_Duration/results/chains.txt')
+from modules.libraries import *
+from modules.parsers import *
+from modules.evaluate import *
+from modules.graphs import *
+from modules.worm_modules import *
+from modules.config import *
 
 # Data
 G = build_graph(file_path)
@@ -24,12 +11,13 @@ root_node = list(nx.topological_sort(G))[0]
 terminal_nodes = get_terminal_nodes(G)
 
 # Chain results
-chains_df = pd.read_pickle(chains_df_path)
+chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
 chains = list(chains_df['nodes'])
 n1, n2 = len(chains), len(set(chains))
 print(chains_df.info())
 print('{n1} chains | {n2} unique chains'.format(n1=n1, n2=n2))
 chains_str = '\n'.join(chains)
+chains_printout_path = os.path.join(results_path, 'chains.txt')
 with open(chains_printout_path, 'w') as f: f.write(chains_str)
 
 # Chains metadata
@@ -58,7 +46,7 @@ nodes_chains = pd.DataFrame(nodes_chains, columns=['ID', 'ChainID', 'NeighbourID
 # Data parse and duration
 graphml_str = open(file_path).read().replace('&amp;', '')
 headers = ['ID', 'TaskType', 'Label', 'PlannedStart', 'PlannedEnd', 'ActualStart', 'ActualEnd', 'Float', 'Status']
-data_df = parse_graphml(file_name, graphml_str, headers)
+data_df = parse_graphml(data_file_name, graphml_str, headers)
 planned_duration = activities_duration(data_df, 'planned')
 planned_duration_df = pd.DataFrame(list(zip(list(planned_duration.keys()), list(planned_duration.values()))), columns=['ID', 'planned_duration'])
 actual_duration = activities_duration(data_df, 'actual')
