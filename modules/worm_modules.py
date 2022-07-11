@@ -1,3 +1,5 @@
+import time
+
 from modules.libraries import *
 from modules.graphs import *
 class wormWalk:
@@ -27,7 +29,6 @@ class wormWalk:
 		return chain_id
 
 	def grow(self):
-		start_node = self.start_node
 		#chain_id = self.anchor_chain_id + 1
 		chain_id = self.get_chain_id()
 		successors = self.successors

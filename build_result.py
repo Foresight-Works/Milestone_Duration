@@ -52,6 +52,7 @@ for index, row in chains_df.iterrows():
 				pair_edge_type = None
 		else: pair_edge_type = None
 		nodes_chains.append((node, chain_id, next_node, pair_edge_type))
+		a = 0
 nodes_chains = pd.DataFrame(nodes_chains, columns=['ID', 'ChainID', 'NeighbourID', 'Dependency'])
 
 # Data parse and duration
@@ -66,4 +67,3 @@ planned_actual_df = pd.merge(planned_duration_df, actual_duration_df, how='left'
 data_duration = pd.merge(data_df, planned_actual_df)
 data_chains_duration = pd.merge(nodes_chains, data_duration, how='left')
 data_chains_duration.to_excel('./results/data_chains_duration.xlsx', index=False)
-
