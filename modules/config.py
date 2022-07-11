@@ -1,4 +1,7 @@
 import os
+import sys
+from modules.db_tables import *
+from modules.libraries import *
 
 data_path = '/home/rony/Projects_Code/Milestones_Duration/data'
 experiment_id = 3
@@ -15,17 +18,26 @@ servicePort = locationPort[serviceLocation]
 url = 'http://{ip}:{port}/cluster_analysis/api/v0.1/milestones'.format(ip=serviceIP, port=servicePort)
 
 # Database connection
-#server_db_params = {'Local': {'host': 'localhost', 'user':'rony', 'password': 'exp8546$fs', 'database': db_name},\
-#                    'Remote': {'host': serviceIP, 'user': 'researchUIuser', 'password':'query1234$fs', 'database': db_name}}
+#server_db_params = {'Local': {'host': 'localhost', 'user': 'rony', 'password': 'exp8546$fs', 'database': db_name},\
+#                    'Remote': {'host': serviceIP, 'user': 'researchUIuser', 'password': 'query1234$fs', 'database': db_name}}
 import mysql.connector as mysql
 private_serviceIP = '172.31.15.123'
-user, password, db_name = 'rony', 'exp8546$fs', 'CAdb'
+user, password, db_name = 'rony', 'exp8546$fs', 'MCdb'
 server_db_params = {'Local': {'host': 'localhost', 'user': user, 'password': password, 'database': db_name},\
                     'Remote': {'host': private_serviceIP, 'user': user, 'password': password, 'database': db_name}}
 conn_params = server_db_params[serviceLocation]
 conn = mysql.connect(**conn_params)
 c = conn.cursor()
 c.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
+
+# Tables
+tracker_cols_types = {'step': 'INTEGER', 'growth_certificates': 'DECIMAL', 'filtered_growth_certificates': 'INTEGER', \
+                   'birth_certificates': 'INTEGER', 'filtered_birth_certificates': 'INTEGER', 'applied_certificates': 'INTEGER', \
+                   'chains': 'INTEGER', 'growthD': 'DECIMAL', 'growth_to_reprD': 'DECIMAL', 'reproduceD': 'DECIMAL', \
+                   'updateD': 'DECIMAL', 'certificate_selectD': 'DECIMAL', 'writeD': 'DECIMAL', 'processesD': 'DECIMAL', \
+                   'stepD': 'DECIMAL', 'step_processes_diff': 'DECIMAL', 'step_processes_diff_ratio': 'DECIMAL'}
+statement = build_create_table_statement('tracker', tracker_cols_types)
+c.execute(statement)
 
 # Directories
 working_dir = os.getcwd()

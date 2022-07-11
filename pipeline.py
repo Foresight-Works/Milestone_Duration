@@ -1,9 +1,4 @@
-import copy
-import os
-import time
-
-import pandas as pd
-
+from modules.config import *
 from modules.libraries import *
 from modules.graphs import *
 from modules.chains import *
@@ -42,8 +37,8 @@ applied_certificates = []
 start = time.time()
 step = 0
 tracker_rows = []
-#while terminal_nodes_tracker:
-while step < 3001:
+while terminal_nodes_tracker:
+#while step < 3001:
 	start1 = time.time()
 	step +=1
 	print(step)
@@ -116,11 +111,5 @@ while step < 3001:
                    chains_count, growth_duration, growth_to_repr_duration, reproduce_duration,\
                    update_duration, certificate_select_duration, write_duration, processes_duration,\
                    step_duration, diff, diff_ratio]
-	tracker_columns    = ['step', 'growth_certificates', 'filtered_growth_certificates_count',\
-	              'birth_certificates', 'filtered_birth_certificates_count', 'applied_certificates', \
-	              'chains', 'growthD', 'growth_to_reprD', 'reproduceD', \
-	              'updateD', 'certificate_selectD', 'writeD', 'processesD', \
-	              'stepD', 'step_processes_diff', 'step_processes_diff_ratio']
-	tracker_rows.append(tracker_row)
-	tracker_rows_df = pd.DataFrame(tracker_rows, columns=tracker_columns)
-	tracker_rows_df.to_excel('chains_worms_tracker2.xlsx', index=False)
+	statement = insert_into_table_statement('{db}.tracker'.format(db=db_name), list(tracker_cols_types.keys()), tracker_row)
+	c.execute(statement)
