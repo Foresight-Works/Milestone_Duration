@@ -31,13 +31,14 @@ c = conn.cursor()
 c.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
 
 # Tables
+tracker_table = 'tracker'
 tracker_cols_types = {'step': 'INTEGER', 'growth_certificates': 'DECIMAL', 'filtered_growth_certificates': 'INTEGER', \
                    'birth_certificates': 'INTEGER', 'filtered_birth_certificates': 'INTEGER', 'applied_certificates': 'INTEGER', \
-                   'chains': 'INTEGER', 'growthD': 'DECIMAL', 'growth_to_reprD': 'DECIMAL', 'reproduceD': 'DECIMAL', \
-                   'updateD': 'DECIMAL', 'certificate_selectD': 'DECIMAL', 'writeD': 'DECIMAL', 'processesD': 'DECIMAL', \
+                   'chains': 'INTEGER', 'growthD': 'DECIMAL', 'reproduceD': 'DECIMAL', \
+                   'updateD': 'DECIMAL', 'certificate_selectD': 'DECIMAL', 'processesD': 'DECIMAL', \
                    'stepD': 'DECIMAL', 'step_processes_diff': 'DECIMAL', 'step_processes_diff_ratio': 'DECIMAL'}
-statement = build_create_table_statement('tracker', tracker_cols_types)
-c.execute(statement)
+chains_cols_types = {'worm': 'INTEGER', 'chain': 'INTEGER', 'nodes': 'TEXT'}
+tracker_table, chains_table = 'tracker', 'chains'
 
 # Directories
 working_dir = os.getcwd()

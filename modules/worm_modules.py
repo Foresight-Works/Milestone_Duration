@@ -2,6 +2,8 @@ import time
 
 from modules.libraries import *
 from modules.graphs import *
+from modules.config import *
+
 class wormWalk:
 	def __init__(self, G, recentWormID, chains_path, birth_certificate):
 		self.birth_certificate = birth_certificate
@@ -17,14 +19,14 @@ class wormWalk:
 		self.recentWormID = recentWormID
 
 	def previous_step_chain(self):
-		chains_df = pd.read_pickle(self.chains_path)
-		chain_id = self.anchor_chain_id
+		chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
 		worm_chains = list(chains_df['nodes'][chains_df['chain'] == self.anchor_chain_id])
 		chain_to_return = max(worm_chains, key=len).split(',')
 		return chain_to_return
 
 	def get_chain_id(self):
-		chain_ids = list(pd.read_pickle(self.chains_path)['chain'])
+		chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
+		chain_ids = list(chains_df['chain'])
 		chain_id = max(chain_ids)+1
 		return chain_id
 

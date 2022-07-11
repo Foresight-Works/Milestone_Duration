@@ -212,25 +212,16 @@ def extend_chain(tail_successors_submitted):
 	# for Gedge in Gedges: edges_types[(Gedge[0], Gedge[1])] = Gedge[2]['Dependency']
 
 
-def write_chains(chains, path, how='pickle'):
-	chains_to_str = []
-	for chain in chains:
-		if type(chain[0]) == list:
-			for c in chain:
-				chains_to_str.append(c)
-		else:
-			chains_to_str.append(chain)
-	if how == 'pickle':
-		chains_str = [re.sub("\[|\]|\'", '', str(c)) for c in chains_to_str]
-		chains_str = list(set(chains_str))
-		chains_df = pd.DataFrame(chains_str, columns=['chain'])
-		chains_df.to_pickle(path)
-		print('{p} chains written'.format(p=len(chains_str)))
-	elif how == 'text':
-		chains_str = '\n'.join([re.sub("\[|\]|\'", '', str(c)) for c in chains_to_str])
-		chains_str = list(set(chains_str))
-		with open(path, 'w') as f: f.write(chains_str)
-		print('{p} chains written'.format(p=len(chains_str)))
+def write_rows_bulk(rows, table_name, tmp_path, conn):
+	rows_str = []
+	for row in rows:
+		rows_str.append()
+	extended_chains = '\n'.join(chains)
+	with open(tmp_path, 'w') as f: f.write(extended_chains)
+	statement = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE {tn} LINES TERMINATED BY '\n'".format(
+		tp=tmp_path, tn=table_name)
+	c.execute(statement)
+	conn.commit()
 
 def read_chains(path, how='pickle'):
 	if how == 'pickle':

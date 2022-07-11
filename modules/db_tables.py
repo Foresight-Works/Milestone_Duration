@@ -40,3 +40,4 @@ def insert_into_table_statement(table_name, cols, cols_vals):
     vals_str = vals_str.rstrip(",")+")"
     return "INSERT INTO {tn} {cv} VALUES {vs}".format(tn=table_name, cv=cols_str, vs=vals_str)
 
+
