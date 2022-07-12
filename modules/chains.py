@@ -117,21 +117,6 @@ def chains_nodes_count(chains):
 	for chain in chains: nodes += chain
 	return (len(set(nodes)))
 
-def numeric_kv(strings, use_floats=True):
-
-	'''
-	Hash strings as a floating point number
-	:param strings (list): A list of strings
-	:return: A dictionary of strings: flaoting point number
-	'''
-	mapping = {}
-	if use_floats: numeric_val, increment, decimal = 0.0, 0.1, 2
-	else: numeric_val, increment, decimal = 0, 1, 0
-	for string in strings:
-		numeric_val = round(numeric_val + increment, decimal)
-		mapping[string] = numeric_val
-	return mapping
-
 def lists_items(items_lists):
 	items = []
 	for items_list in items_lists:
@@ -139,9 +124,9 @@ def lists_items(items_lists):
 		items += items_list
 	return items
 
-def items_hash_map(items_lists):
+def encode_text_strings(items_lists):
 	items = lists_items(items_lists)
-	return numeric_kv(items)
+	return serial_encoder(items)
 
 def hash_lists(items_lists, items_map, result_type = 'tuple'):
 	hashed_lists = []
@@ -238,7 +223,7 @@ def root_chains(G):
 	:return: List of node chains
 	'''
 	Gnodes = G.nodes()
-	# nodes_hash_map = numeric_kv(Gnodes)
+	# nodes_hash_map = serial_encoder(Gnodes)
 	# hash_nodes_map = {v: k for k, v in nodes_hash_map.items()}
 	# G = nx.relabel_nodes(G, nodes_hash_map)
 	Gnodes, Gedges = G.nodes(), G.edges()

@@ -4,6 +4,7 @@ from modules.config import *
 from modules.libraries import *
 from modules.graphs import *
 from modules.chains import *
+from modules.encoders import *
 from modules.worm_modules import *
 start = time.time()
 
@@ -55,7 +56,8 @@ while terminal_nodes_tracker:
 	print(step)
 	recentWormID = get_recent_id(certificates)
 	walk = wormWalk(G, recentWormID, chains_path, certificate)
-	applied_certificates.append(certificate)
+	if len(certificate) == 3:
+		applied_certificates.append(certificate)
 	start = time.time()
 	chainIndex, chain = walk.grow()
 	growth_duration = round(time.time() - start, 3)
@@ -69,7 +71,6 @@ while terminal_nodes_tracker:
 		chains_fetched = c.fetchall()
 		chains_list = [chain[0] for chain in chains_fetched]
 		chains_count = len(chains_list)
-
 		if chain_str not in chains_list:
 			chains_results_row = [wormIndex, chainIndex, chain_str]
 			#chains_results_rows.append([wormIndex, chainIndex, chain_str])
