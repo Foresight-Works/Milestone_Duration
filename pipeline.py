@@ -95,7 +95,12 @@ while terminal_nodes_tracker:
 	growth_certificates_count = len(set([str(c) for c in growth_certificates]))
 	birth_certificates_count = len(set([str(c) for c in birth_certificates]))
 
-	growth_certificates = [gc for gc in growth_certificates if gc not in applied_certificates]
+	#growth_certificates = [gc for gc in growth_certificates if gc not in applied_certificates]
+	growth_certificates_tuples = [tuple(c) for c in growth_certificates]
+	applied_certificates_tuples = [tuple(c) for c in applied_certificates]
+	growth_certificates = list(set(growth_certificates_tuples).difference(set(applied_certificates_tuples)))
+	growth_certificates = [list(c) for c in growth_certificates]
+	a = 0
 	# birth_certificates = [bc for bc in birth_certificates if bc not in applied_certificates]
 	update_duration = round(time.time() - start, 3)
 
