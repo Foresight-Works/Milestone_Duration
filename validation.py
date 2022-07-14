@@ -13,13 +13,13 @@ terminal_nodes = get_terminal_nodes(G)
 source_path = os.path.join(results_path, 'validation', 'predecessors_successors.xlsx')
 source = pd.read_excel(source_path)
 source_pairs = list(zip(source['Predecessor'], source['Successor']))
-print('{n} source pairs; sample:'.format(n=len(source_pairs)), source_pairs[:10])
 
 chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
 chains = list(chains_df['nodes'])
 n1, n2 = len(chains), len(set(chains))
-print(chains_df.info())
-print('{n1} chains | {n2} unique chains'.format(n1=n1, n2=n2))
+tracker = pd.read_sql('SELECT * FROM {t}'.format(t=tracker_table), con=conn)
+steps_count = len(tracker)
+print('{ns} steps produced {n1} chains of which {n2} are unique'.format(ns=steps_count,n1=n1, n2=n2))
 
 chains_printout_path = os.path.join(results_path, 'chains.txt')
 chains_str = '\n'.join(chains)
@@ -50,9 +50,13 @@ for index, chain in enumerate(chains):
 	pairs += chain_pairs
 
 pairs = list(set(pairs))
-print('{n} pairs; sample:'.format(n=len(pairs)), pairs[:10])
-
 pairs_in_source = [p for p in pairs if p in source_pairs]
-print('{n} pairs in source; sample:'.format(n=len(pairs_in_source)), pairs_in_source[:10])
+
+print('The chains produced {n1} successor-predecessor pairs, of which {n2} appear as such at the program file\n \
+      which is built of a total of {ns} pairs'.
+      format(n1=len(pairs), n2=len(pairs_in_source), ns=len(source_pairs)))
+duration = sum(list(tracker['stepd']))
+print('Run duration={t1} seconds, {t2} minutes, {t3} hours'
+      .format(t1=duration, t2=round(duration/60, 2), t3=round(duration/3600, 2)))
 
 # Todo Validation: All successor-predecessor pairs in chains pairs

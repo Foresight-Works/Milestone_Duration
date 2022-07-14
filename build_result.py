@@ -1,3 +1,5 @@
+import pandas as pd
+
 from modules.libraries import *
 from modules.parsers import *
 from modules.evaluate import *
@@ -11,14 +13,16 @@ root_node = list(nx.topological_sort(G))[0]
 terminal_nodes = get_terminal_nodes(G)
 
 # Chain results
-chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
-chains = list(chains_df['nodes'])
-n1, n2 = len(chains), len(set(chains))
+# chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
+chains_df = pd.read_excel(os.path.join(results_path, 'shortest_path_chains.xlsx'))
 print(chains_df.info())
-print('{n1} chains | {n2} unique chains'.format(n1=n1, n2=n2))
+chains = list(chains_df['nodes'])
 chains_str = '\n'.join(chains)
-chains_printout_path = os.path.join(results_path, 'chains.txt')
-with open(chains_printout_path, 'w') as f: f.write(chains_str)
+# chains_printout_path = os.path.join(results_path, 'chains.txt')
+# with open(chains_printout_path, 'w') as f: f.write(chains_str)
+chains = open(os.path.join(results_path, 'shortest_path_chains.txt'))
+n1, n2 = len(chains), len(set(chains))
+print('{n1} chains | {n2} unique chains'.format(n1=n1, n2=n2))
 
 # Chains metadata
 Gedges = G.edges(data=True)

@@ -7,6 +7,8 @@ from modules.chains import *
 from modules.encoders import *
 from modules.worm_modules import *
 start = time.time()
+import warnings
+warnings.filterwarnings("ignore")
 
 # Data
 G = build_graph(file_path)
@@ -18,6 +20,7 @@ isolates = graph_isolates(G)
 print('Graph with {n} nodes and {e} edges'.format(n=len(Gnodes), e=len(Gedges)))
 root_node = list(nx.topological_sort(G))[0]
 terminal_nodes = get_terminal_nodes(G)
+print(terminal_nodes)
 
 # Results tables
 c.execute("DROP TABLE IF EXISTS {t}".format(t=tracker_table))
