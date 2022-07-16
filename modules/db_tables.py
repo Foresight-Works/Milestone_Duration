@@ -21,7 +21,8 @@ def build_create_table_statement(table_name, cols_types):
     statement_cols_types = statement_cols_types.rstrip(',')
     return "CREATE TABLE IF NOT EXISTS {tn} ({ct});".format(tn=table_name, ct=statement_cols_types)
 
-def insert_into_table_statement(table_name, cols, cols_vals):
+# was: insert_into_table_statement
+def insert_row(table_name, cols, cols_vals):
     '''
     Update table
     :param db_name(str): The name of the database to connect using the engine
@@ -40,4 +41,37 @@ def insert_into_table_statement(table_name, cols, cols_vals):
     vals_str = vals_str.rstrip(",")+")"
     return "INSERT INTO {tn} {cv} VALUES {vs}".format(tn=table_name, cv=cols_str, vs=vals_str)
 
+def insert_rows(table_name, cols, cols_vals):
+    '''
+    Update table with multiple rows
+    :param db_name(str): The name of the database to connect using the engine
+    :param table_name(str): The name of the table to create
+    :param cols(list): Table column cluster_key
+    :param cols_vals(list of tuples): Rows values, each row as a tuple
 
+    INSERT INTO
+	projects(name, start_date, end_date)
+    VALUES
+	('AI for Marketing','2019-08-01','2019-12-31'),
+	('ML for Sales','2019-05-15','2019-11-20');
+
+
+    '''
+    vals_str, cols_str = "(", "("
+    for col_val in enumerate(cols_vals):
+        vals_str += "'{v}',".format(v=str(col_val))
+    for col in cols:
+        cols_str += "{c},".format(c=col)
+    cols_str = cols_str.rstrip(",")+")"
+    vals_str = vals_str.rstrip(",")+")"
+    statement = "INSERT INTO {tn}(cols_str) {cv} VALUES {vs}"\
+        .format(tn=table_name, cv=cols_str, vs=vals_str)
+    return statement
+
+
+
+# INSERT INTO
+# 	projects(name, start_date, end_date)
+# VALUES
+# 	('AI for Marketing','2019-08-01','2019-12-31'),
+# 	('ML for Sales','2019-05-15','2019-11-20');

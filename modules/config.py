@@ -22,9 +22,12 @@ url = 'http://{ip}:{port}/cluster_analysis/api/v0.1/milestones'.format(ip=servic
 # Database connection
 #server_db_params = {'Local': {'host': 'localhost', 'user': 'rony', 'password': 'exp8546$fs', 'database': db_name},\
 #                    'Remote': {'host': serviceIP, 'user': 'researchUIuser', 'password': 'query1234$fs', 'database': db_name}}
+#from sqlalchemy import create_engine
 import mysql.connector as mysql
 private_serviceIP = '172.31.15.123'
 user, password, db_name = 'rony', 'exp8546$fs', 'MCdb'
+# engine = create_engine('mysql+mysqldb://{u}:{p}@localhost/{db}'\
+#                          .format(u=user, p=password, db=db_name))
 server_db_params = {'Local': {'host': 'localhost', 'user': user, 'password': password, 'database': db_name},\
                     'Remote': {'host': private_serviceIP, 'user': user, 'password': password, 'database': db_name}}
 conn_params = server_db_params[serviceLocation]
@@ -34,11 +37,11 @@ c.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
 
 # Tables
 tracker_table = 'tracker'
-tracker_cols_types = {'step': 'INTEGER', 'growth_certificates': 'DECIMAL', 'filtered_growth_certificates': 'INTEGER', \
+tracker_cols_types = {'step': 'INTEGER', 'chain_built': 'INTEGER', 'new_chain': 'INTEGER', 'growth_certificates': 'DOUBLE', 'filtered_growth_certificates': 'INTEGER', \
                    'birth_certificates': 'INTEGER', 'filtered_birth_certificates': 'INTEGER', 'applied_certificates': 'INTEGER', \
-                   'chains': 'INTEGER', 'growthD': 'DECIMAL', 'reproduceD': 'DECIMAL', \
-                   'updateD': 'DECIMAL', 'certificate_selectD': 'DECIMAL', 'processesD': 'DECIMAL', \
-                   'stepD': 'DECIMAL', 'step_processes_diff': 'DECIMAL', 'step_processes_diff_ratio': 'DECIMAL'}
+                   'chains': 'INTEGER', 'growthD': 'DOUBLE', 'writeD': 'DOUBLE', 'reproduceD': 'DOUBLE', \
+                   'updateD': 'DOUBLE', 'processesD': 'DOUBLE', \
+                   'stepD': 'DOUBLE', 'step_processes_diff': 'DOUBLE', 'step_processes_diff_ratio': 'DOUBLE'}
 chains_cols_types = {'worm': 'INTEGER', 'chain': 'INTEGER', 'nodes': 'TEXT'}
 tracker_table, chains_table = 'tracker', 'chains'
 

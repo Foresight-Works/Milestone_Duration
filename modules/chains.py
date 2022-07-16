@@ -198,15 +198,14 @@ def extend_chain(tail_successors_submitted):
 
 
 def write_rows_bulk(rows, table_name, tmp_path, conn):
-	rows_str = []
-	for row in rows:
-		rows_str.append()
-	extended_chains = '\n'.join(chains)
-	with open(tmp_path, 'w') as f: f.write(extended_chains)
-	statement = "LOAD DATA LOCAL INFILE '{tp}' INTO TABLE {tn} LINES TERMINATED BY '\n'".format(
+	rows = '\n'.join(rows)
+	with open(tmp_path, 'w') as f: f.write(rows)
+	statement = "LOAD DATA INFILE '{tp}' INTO TABLE {tn} LINES TERMINATED BY '\n'".format(
 		tp=tmp_path, tn=table_name)
+	c = conn.cursor()
 	c.execute(statement)
 	conn.commit()
+
 
 def read_chains(path, how='pickle'):
 	if how == 'pickle':

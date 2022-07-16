@@ -1,7 +1,7 @@
 import random
 import nltk
 from sklearn.datasets import fetch_20newsgroups
-corpus_size, sample_query_size = 100000, 20000
+corpus_size, sample_query_size = 100000, 60000
 newsgroups_train = fetch_20newsgroups(subset='train')['data']
 tokens = []
 i = 0
