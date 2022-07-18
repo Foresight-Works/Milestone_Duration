@@ -54,24 +54,16 @@ def insert_rows(table_name, cols, cols_vals):
     VALUES
 	('AI for Marketing','2019-08-01','2019-12-31'),
 	('ML for Sales','2019-05-15','2019-11-20');
-
+    INSERT INTO MCdb.chains(worm,chain,nodes) VALUES ('1','0','A1170'),('1','2','MWH06.C1.CS1110')
 
     '''
-    vals_str, cols_str = "(", "("
-    for col_val in enumerate(cols_vals):
-        vals_str += "'{v}',".format(v=str(col_val))
+    vals_str, cols_str = "", "("
+    for col_val in cols_vals:
+        vals_str += "({v}),".format(v=','.join(["'{v}'".format(v=str(v)) for v in col_val]))
     for col in cols:
         cols_str += "{c},".format(c=col)
     cols_str = cols_str.rstrip(",")+")"
-    vals_str = vals_str.rstrip(",")+")"
-    statement = "INSERT INTO {tn}(cols_str) {cv} VALUES {vs}"\
+    vals_str = vals_str.rstrip(",") #+")"
+    statement = "INSERT INTO {tn}{cv} VALUES {vs}"\
         .format(tn=table_name, cv=cols_str, vs=vals_str)
     return statement
-
-
-
-# INSERT INTO
-# 	projects(name, start_date, end_date)
-# VALUES
-# 	('AI for Marketing','2019-08-01','2019-12-31'),
-# 	('ML for Sales','2019-05-15','2019-11-20');

@@ -8,7 +8,7 @@ if mp not in sys.path: sys.path.append(mp)
 from plots import *
 from modules.config import *
 
-experiment_dir = 'bc_encoder_filter1'
+experiment_dir = 'alt_write'
 results_path = os.path.join(results_path, experiment_dir)
 plots_path = os.path.join(results_path, 'plots')
 tracker = pd.read_excel(os.path.join(results_path, 'tracker.xlsx'))

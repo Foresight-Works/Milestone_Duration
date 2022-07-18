@@ -13,15 +13,17 @@ root_node = list(nx.topological_sort(G))[0]
 terminal_nodes = get_terminal_nodes(G)
 
 # Chain results
-chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
+# chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
+chains_df = pd.read_excel(os.path.join(results_path, 'shortest_path_chains.xlsx'))
 print(chains_df.info())
 chains = list(chains_df['nodes'])
 chains_str = '\n'.join(chains)
-chains_printout_path = os.path.join(results_path, 'chains.txt')
-with open(chains_printout_path, 'w') as f: f.write(chains_str)
+# chains_printout_path = os.path.join(results_path, 'chains.txt')
+# with open(chains_printout_path, 'w') as f: f.write(chains_str)
+chains = open(os.path.join(results_path, 'shortest_path_chains.txt'))
 n1, n2 = len(chains), len(set(chains))
 print('{n1} chains | {n2} unique chains'.format(n1=n1, n2=n2))
-a=0
+
 # Chains metadata
 Gedges = G.edges(data=True)
 edges_types = {}
@@ -29,7 +31,7 @@ for Gedge in Gedges: edges_types[(Gedge[0], Gedge[1])] = Gedge[2]['Dependency']
 nodes_chains = []
 for index, row in chains_df.iterrows():
 	chain_id = row['chain']
-	nodes = row['nodes'].split('<>')
+	nodes = row['nodes'].split(',')
 	for index, node in enumerate(nodes):
 		if index <= (len(nodes)-2):
 			next_node = nodes[index+1]

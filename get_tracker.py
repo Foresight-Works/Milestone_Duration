@@ -4,7 +4,7 @@ path = '/home/rony/Projects_Code/Milestones_Duration/modules'
 if path not in sys.path: sys.path.append(path)
 from modules.config import *
 from modules.libraries import *
-experiment_dir = 'bc_encoder_filter1'
+experiment_dir = 'alt_write'
 results_path = os.path.join(results_path, experiment_dir)
 
 df = pd.read_sql('SELECT * FROM {t}'.format(t=tracker_table), con=conn)

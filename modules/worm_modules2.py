@@ -21,31 +21,39 @@ class wormWalk:
 
 	def previous_step_chain(self):
 		worm_chains = list(self.chains_built_df['nodes'][self.chains_built_df['chain'] == self.anchor_chain_id])
-		chain_to_return = max(worm_chains, key=len).split(',')
+		chain_to_return = []
+		if worm_chains:
+			chain_to_return = max(worm_chains, key=len).split('<>')
 		return chain_to_return
 
 	def get_chain_id(self):
 		chain_ids = list(self.chains_built_df['chain'])
-		chain_id = max(chain_ids)+1
+		if chain_ids:
+			chain_id = max(chain_ids)+1
+		else:
+			chain_id = 0
 		return chain_id
 
 	def grow(self):
+		previous_step_chain = self.previous_step_chain()
 		chain_id = self.get_chain_id()
 		successors = self.successors
 		if self.pointer:
 			successors_chains = []
 			for successor in successors:
-				chain = self.previous_step_chain() + [successor]
+				chain = previous_step_chain + [successor]
 				successors_chains.append(chain)
 			for successor_chain in successors_chains:
 				if successor_chain[-1] == self.pointer:
 					chain = successor_chain
+			a = 0
 		else:
 			if successors:
 				next_node = successors[0]
-				chain = self.previous_step_chain() + [next_node]
+				chain = previous_step_chain + [next_node]
 			else:
 				chain_id, chain = None, None
+			a=0
 		return (chain_id, chain)
 
 	def reproduce(self, growth_node):

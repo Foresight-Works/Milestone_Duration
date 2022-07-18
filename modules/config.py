@@ -42,7 +42,9 @@ tracker_cols_types = {'step': 'INTEGER', 'chain_built': 'INTEGER', 'new_chain': 
                    'chains': 'INTEGER', 'growthD': 'DOUBLE', 'writeD': 'DOUBLE', 'reproduceD': 'DOUBLE', \
                    'updateD': 'DOUBLE', 'processesD': 'DOUBLE', \
                    'stepD': 'DOUBLE', 'step_processes_diff': 'DOUBLE', 'step_processes_diff_ratio': 'DOUBLE'}
-chains_cols_types = {'worm': 'INTEGER', 'chain': 'INTEGER', 'nodes': 'TEXT'}
+chains_cols_types = {'worm': 'INTEGER', 'chain': 'INTEGER', 'nodes': 'TEXT',  'tip': 'TEXT', 'pointer': 'TEXT'}
+chains_cols = ['worm', 'chain', 'nodes', 'tip', 'pointer']
+
 tracker_table, chains_table = 'tracker', 'chains'
 
 # Directories

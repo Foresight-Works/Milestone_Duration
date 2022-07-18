@@ -54,7 +54,6 @@ step = 0
 tracker_rows = []
 chains_list = []
 while terminal_nodes_tracker:
-#while step < 3001:
 	start1 = time.time()
 	step +=1
 	growth_certificates_count, filtered_growth_certificates_count,\
