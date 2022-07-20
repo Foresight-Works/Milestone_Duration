@@ -8,10 +8,7 @@ if mp not in sys.path: sys.path.append(mp)
 from plots import *
 from modules.config import *
 
-experiment_dir = 'alt_write'
-results_path = os.path.join(results_path, experiment_dir)
-plots_path = os.path.join(results_path, 'plots')
-tracker = pd.read_excel(os.path.join(results_path, 'tracker.xlsx'))
+tracker = pd.read_excel(os.path.join(experiment_path, 'tracker.xlsx'))
 no_chain_steps = tracker[tracker['chain_built'] == 0]
 built_chain_steps = tracker[(tracker['chain_built'] == 1) & (tracker['new_chain'] == 0)]
 new_chain_steps = tracker[tracker['new_chain'] == 1]
@@ -22,12 +19,7 @@ group_data = {'steps': tracker, 'noChain': no_chain_steps,\
 #print(tracker.columns)
 #val_cols = [c for c in df.columns if c != 'step']
 
-def plot_df(df, name):
-	xy_pairs = [('writed', 'stepd'), ('chains', 'stepd'), ('chains', 'writed'), ('chains', 'growthd'), ('chains', 'reproduced'), \
-	            ('growth_certificates', 'growthd'), ('birth_certificates', 'reproduced'), \
-	            ('birth_certificates', 'filtered_birth_certificates'),
-	            ('growth_certificates', 'filtered_growth_certificates'), \
-	            ('chains', 'step_processes_diff_ratio')]
+def plot_df(df, name, xy_pairs):
 	for x_col, y_col in xy_pairs:
 		x, y = list(df[x_col]), list(df[y_col])
 		plt.scatter(x, y, marker='.', s=1)
@@ -37,7 +29,14 @@ def plot_df(df, name):
 		plt.savefig(os.path.join(plots_path, figname))
 		plt.close()
 
-for group, df in group_data.items(): plot_df(df, group)
+
+xy_pairs = [('writed', 'stepd'), ('chains', 'stepd'), ('chains', 'writed'), ('chains', 'growthd'),
+            ('chains', 'reproduced'), \
+            ('chains', 'updated'), ('updated', 'stepd')]
+ratio_pairs = [('chains', col) for col in tracker.columns if 'ratio' in col]
+xy_pairs += ratio_pairs
+print(xy_pairs)
+for group, df in group_data.items(): plot_df(df, group, xy_pairs)
 
 # for col in val_cols:
 # 	print(col)

@@ -1,3 +1,4 @@
+import os
 import numpy as np
 from itertools import combinations
 import networkx as nx
@@ -64,13 +65,23 @@ from vizz import draw_graph
 # nt.from_nx(G)
 # nt.show('./results/neighbors_graph.html')
 
-# # Worm walk graph
-G = nx.DiGraph()
+# Worm walk graph
 G_edges = [('N1', 'N2'), ('N2', 'N3'), ('N2', 'N4'), ('N2', 'N5'), ('N3', 'N6'),\
            ('N3', 'N7'), ('N4', 'N8'), ('N4', 'N9')]
-G.add_edges_from(G_edges)
-root = list(nx.topological_sort(G))[0]
-print('root:', root)
-nx.write_edgelist(G, "./data/worm_walk_demo.edgelist")
-nt.from_nx(G)
-nt.show('./data/worm_walk_demo.html')
+
+# Shortest paths graph
+def build_draw_graph(edges_list, file_name):
+    G = nx.Graph()
+    G.add_edges_from(edges_list)
+    # root = list(nx.topological_sort(G))[0]
+    # print('root:', root)
+    nx.write_edgelist(G, "./data/{fn}.edgelist".format(fn=file_name))
+    file_path = os.path.join('./data', '{fn}.html'.format(fn=file_name))
+    #draw_graph(G, file_path, node_to_color=root)
+    nt.from_nx(G)
+    nt.show(file_path)
+file_name = 'shortest_paths_graph'
+edges_list = [('N1', 'N2'), ('N2', 'N3'), ('N2', 'N4'), ('N2', 'N5'),
+           ('N1', 'N7'), ('N2', 'N7'),
+           ('N1', 'N9'), ('N9', 'N10'), ('N9', 'N8'), ('N10', 'N3')]
+build_draw_graph(edges_list, file_name)

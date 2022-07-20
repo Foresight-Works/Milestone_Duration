@@ -1,10 +1,14 @@
 import os
+import time
+
+import pandas as pd
 
 from modules.config import *
 from modules.libraries import *
 from modules.graphs import *
 from modules.chains import *
 from modules.encoders import *
+from modules.filters import *
 from modules.worm_modules import *
 start = time.time()
 import warnings
@@ -20,7 +24,6 @@ isolates = graph_isolates(G)
 print('Graph with {n} nodes and {e} edges'.format(n=len(Gnodes), e=len(Gedges)))
 root_node = list(nx.topological_sort(G))[0]
 terminal_nodes = get_terminal_nodes(G)
-print(terminal_nodes)
 
 # Results tables
 c.execute("DROP TABLE IF EXISTS {t}".format(t=tracker_table))
@@ -32,14 +35,12 @@ statement = build_create_table_statement('{t}'.format(t=chains_table), chains_co
 c.execute(statement)
 
 # Initialized crawling and worms parameters
-wormIndex, chainIndex = 1, 1
+wormIndex, chainIndex = 1, 0
 certificate = (wormIndex, chainIndex, root_node, list(G.successors(root_node))[0])
-first_certificate = copy.deepcopy(certificate)
 # Results
 chains_path = os.path.join(os.getcwd(), 'results', 'chains.pkl')
-chains_cols = ['worm', 'chain', 'nodes']
-chains_results_row = [wormIndex, chainIndex, root_node]
-statement = insert_into_table_statement('{db}.chains'.format(db=db_name), chains_cols, chains_results_row)
+chains_results_row = [wormIndex, chainIndex, root_node, root_node, None]
+statement = insert_row('{db}.chains'.format(db=db_name), chains_cols, chains_results_row)
 c.execute(statement)
 conn.commit()
 
@@ -47,77 +48,89 @@ conn.commit()
 # Termination condition: all worms reached terminal nodes
 growth_certificates_index, birth_certificates_index = 0, 0
 certificates = {'growth_certificates': [], 'birth_certificates': [certificate]}
-terminal_nodes_tracker = copy.deepcopy(terminal_nodes)
+
 applied_certificates = []
 start = time.time()
 step = 0
 tracker_rows = []
-while terminal_nodes_tracker:
-#while step < 3001:
-	start1 = time.time()
-	step +=1
+chains_built = [(0, root_node)]
+chains_results_rows = []
+cert_chains = []
+
+# Pairs validation
+source_path = os.path.join(results_path, 'validation', 'predecessors_successors.xlsx')
+source = pd.read_excel(source_path)
+source_pairs = list(zip(source['Predecessor'], source['Successor']))
+
+start_process = time.time()
+while certificate:
+	error_pairs = []
+	step_start = time.time()
+	growth_tip = ['no tip']
+	step += 1
 	print(step)
-	recentWormID = get_recent_id(certificates)
-	walk = wormWalk(G, recentWormID, chains_path, certificate)
-	#if len(certificate) == 3:
-	applied_certificates.append(certificate)
+	chain_built=new_chain=applied_certificates_count=\
+    chains_count=start_duration=growth_duration=prep_chain_duration=write_duration=reproduce_duration=\
+    update_duration=certificate_select_duration = 0
+	start_duration = round(time.time() - step_start, 3)
+	# Worm/Chain growth
 	start = time.time()
+	recentWormID = get_recent_id(certificates)
+	chains_built_df = pd.DataFrame(chains_built, columns=['chain', 'nodes']).drop_duplicates(subset='nodes')
+	walk = wormWalk(G, recentWormID, chains_path, certificate, chains_built_df)
+	applied_certificates.append(certificate)
 	chainIndex, chain = walk.grow()
 	growth_duration = round(time.time() - start, 3)
-	# Update results
-	chains_count, reproduce_duration = 0, 0
 	if chain:
+		# Assert and prepare new chain
+		start = time.time()
+		chain_built = 1
 		growth_tip = chain[-1]
 		wormIndex = certificate[0]
-		chain_str = ','.join([n.rstrip().lstrip() for n in chain])
-		c.execute('SELECT nodes FROM {t}'.format(t=chains_table))
-		chains_fetched = c.fetchall()
-		chains_list = [chain[0] for chain in chains_fetched]
-		chains_count = len(chains_list)
-		if chain_str not in chains_list:
-			chains_results_row = [wormIndex, chainIndex, chain_str]
-			#chains_results_rows.append([wormIndex, chainIndex, chain_str])
-			statement = insert_into_table_statement('{db}.chains'.format(db=db_name), chains_cols, chains_results_row)
-			c.execute(statement)
-			conn.commit()
-			growth_certificate = [wormIndex, chainIndex, growth_tip]
-			certificates['growth_certificates'].append(growth_certificate)
-			growth_to_repr_duration = round(time.time() - start, 3)
+		chains_count = len(chains_built)
+		chain_str = '<>'.join([n.rstrip().lstrip() for n in chain])
+		if (chainIndex, chain_str) not in chains_built:
+			error_pairs = validate(chain, source_pairs)
+			chains_built.append((chainIndex, chain_str))
+			chains_count = len(chains_built)
+			new_chain = 1
+			chains_results_row = [wormIndex, chainIndex, chain_str] + list(certificate[2:])
+			if len(chains_results_row) == 4: chains_results_row += [None]
+			if len(chain) > 1:
+				chains_results_rows.append(tuple(chains_results_row))
+				chains_results_rows = list(set(chains_results_rows))
+			prep_chain_duration = time.time()-start
+			start = time.time()
+			if len(chains_results_rows) == 100:
+				statement = insert_rows('{db}.chains'.format(db=db_name), chains_cols, chains_results_rows)
+				c.execute(statement)
+				conn.commit()
+				chains_results_rows = []
+				write_duration = round(time.time() - start, 3)
+
 			# Update birth_certificates with decendants' birth certificates
 			start = time.time()
 			birth_certificates = walk.reproduce(growth_tip)
 			reproduce_duration = round(time.time() - start, 3)
-			certificates['birth_certificates'] += birth_certificates
-			chains_count = len(chains_list)
 
-	# Update birth and growth certfiicates
-	start = time.time()
+			# Update birth and growth certfiicates
+			start = time.time()
+			growth_certificate = [(wormIndex, chainIndex, growth_tip)]
+			growth_certificate = list(set(lists_filter(growth_certificate, applied_certificates)))
+			birth_certificates = list(set(lists_filter(birth_certificates, applied_certificates)))
+			if birth_certificates: certificates['birth_certificates'] += birth_certificates
+			if growth_certificate: certificates['growth_certificates'].append(growth_certificate[0])
+			if error_pairs:
+				print('errors:', error_pairs)
+				print('certificate:', certificate)
+				print('recentWormID:', recentWormID)
+				print(chains_built_df)
+			update_duration = round(time.time() - start, 3)
+
+	# Next iteration certificate
+	start=time.time()
 	birth_certificates, growth_certificates = \
 		certificates['birth_certificates'], certificates['growth_certificates']
-
-	growth_certificates_count = len(set([str(c) for c in growth_certificates]))
-	birth_certificates_count = len(set([str(c) for c in birth_certificates]))
-
-	#growth_certificates = [gc for gc in growth_certificates if gc not in applied_certificates]
-	applied_certificates_tuples = [tuple(c) for c in applied_certificates]
-	growth_certificates_tuples = [tuple(c) for c in growth_certificates]
-	growth_certificates = list(set(growth_certificates_tuples).difference(set(applied_certificates_tuples)))
-	growth_certificates = [list(c) for c in growth_certificates]
-	a = 0
-	
-	#todo: birth_cetificate filtering reumed
-	# birth_certificates = [bc for bc in birth_certificates if bc not in applied_certificates]
-	birth_certificates_tuples = [tuple(c) for c in birth_certificates]
-	birth_certificates = list(set(birth_certificates_tuples).difference(set(applied_certificates_tuples)))
-	birth_certificates = [list(c) for c in birth_certificates]
-	
-	update_duration = round(time.time() - start, 3)
-
-	filtered_growth_certificates_count = len(set([str(c) for c in growth_certificates]))
-	filtered_birth_certificates_count = len(set([str(c) for c in birth_certificates]))
-
-	start = time.time()
-	# Iteration condition
 	if growth_certificates:
 		certificate = growth_certificates[0]
 		growth_certificates.pop(0)
@@ -126,20 +139,25 @@ while terminal_nodes_tracker:
 	elif birth_certificates:
 		certificate = birth_certificates[0]
 		birth_certificates.pop(0)
-	terminal_nodes_tracker = [n for n in terminal_nodes if n != growth_tip]
-	certificate_select_duration = round(time.time() - start, 3)
-
-	step_duration = round(time.time()-start1, 3)
-	processes_duration = growth_duration + reproduce_duration +\
-	                     update_duration + certificate_select_duration
+	certificate_select_duration = time.time()-start
+	# Duration tracking summation and write-up
+	step_duration = round(time.time()-step_start, 3)
+	processes_duration_vals = [start_duration, growth_duration, prep_chain_duration, write_duration, reproduce_duration, \
+	                                                                                         update_duration, certificate_select_duration]
+	processes_duration = sum(processes_duration_vals)
 	diff = round(step_duration-processes_duration, 3)
 	diff_ratio = round(diff/step_duration, 3)
 	applied_certificates_count = len(applied_certificates)
-	tracker_row = [step, growth_certificates_count, filtered_growth_certificates_count,\
-	               birth_certificates_count, filtered_birth_certificates_count, applied_certificates_count, \
-                   chains_count, growth_duration, reproduce_duration,\
-                   update_duration, certificate_select_duration, processes_duration,\
-                   step_duration, diff, diff_ratio]
-	statement = insert_into_table_statement('{db}.tracker'.format(db=db_name), list(tracker_cols_types.keys()), tracker_row)
+	ratios = [round(duration_val/step_duration, 2) for duration_val in processes_duration_vals]
+	
+	tracker_row = [step, chain_built, new_chain, applied_certificates_count, \
+                   chains_count, start_duration, growth_duration, prep_chain_duration, write_duration, reproduce_duration,\
+                   update_duration, certificate_select_duration, processes_duration, step_duration, diff, diff_ratio] + ratios
+	statement = insert_row('{db}.tracker'.format(db=db_name), list(tracker_cols_types.keys()), tracker_row)
 	c.execute(statement)
 	conn.commit()
+
+# Write the last batch of chains
+statement = insert_rows('{db}.chains'.format(db=db_name), chains_cols, chains_results_rows)
+c.execute(statement)
+conn.commit()

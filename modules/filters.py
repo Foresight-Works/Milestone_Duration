@@ -1,20 +1,20 @@
-from modules.encoders import *
 from bisect import bisect_left
+from encoders import *
 
-def binarySearchFilter(source, target):
+def binarySearchFilter(queries, target):
 	'''
 	Filter one list of numeric values but the elements presents in a second list of numeric values
-	:param source(list): The list to fliter
+	:param queries(list): The list to filter
 	:param target(list): The values to use in filtering
-	:return: A filtered version of the source list
+	:return: A filtered version of the queries list
 	'''
 	target = sorted(target)
-	filtered_source = []
-	for q in source:
+	filtered = []
+	for q in queries:
 		i = bisect_left(target,  q)
 		if i != len(target) and target[i] == q:
-			filtered_source.append(q)
-	return filtered_source
+			filtered.append(q)
+	return filtered
 
 def lists_filter(queries, target):
 	objects = target + queries

@@ -8,7 +8,7 @@ from modules.graphs import *
 from modules.chains import *
 from modules.encoders import *
 from modules.filters import *
-from modules.worm_modules2 import *
+from modules.worm_modules import *
 start = time.time()
 import warnings
 warnings.filterwarnings("ignore")

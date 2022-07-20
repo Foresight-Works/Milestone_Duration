@@ -13,11 +13,11 @@ root_node = list(nx.topological_sort(G))[0]
 terminal_nodes = get_terminal_nodes(G)
 
 # Chain results
-chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn)
+chains_df = pd.read_sql('SELECT * FROM {t}'.format(t=chains_table), con=conn).drop_duplicates(subset='nodes')
 print(chains_df.info())
 chains = list(chains_df['nodes'])
 chains_str = '\n'.join(chains)
-chains_printout_path = os.path.join(results_path, 'chains.txt')
+chains_printout_path = os.path.join(experiment_path, 'chains.txt')
 with open(chains_printout_path, 'w') as f: f.write(chains_str)
 n1, n2 = len(chains), len(set(chains))
 print('{n1} chains | {n2} unique chains'.format(n1=n1, n2=n2))
@@ -56,4 +56,5 @@ actual_duration_df = pd.DataFrame(list(zip(list(actual_duration.keys()), list(ac
 planned_actual_df = pd.merge(planned_duration_df, actual_duration_df, how='left')
 data_duration = pd.merge(data_df, planned_actual_df)
 data_chains_duration = pd.merge(nodes_chains, data_duration, how='left')
-data_chains_duration.to_excel('./results/data_chains_duration.xlsx', index=False)
+#data_chains_duration.to_pickle(os.path.join(experiment_path, 'data_chains_duration.pkl'))
+data_chains_duration.to_csv(os.path.join(experiment_path, 'data_chains_duration.csv'), index=False)

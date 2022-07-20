@@ -1,3 +1,5 @@
+experiment = 'binary_filter2'
+
 import os
 import sys
 from modules.db_tables import *
@@ -37,11 +39,15 @@ c.execute("SET SESSION TRANSACTION ISOLATION LEVEL READ COMMITTED")
 
 # Tables
 tracker_table = 'tracker'
-tracker_cols_types = {'step': 'INTEGER', 'chain_built': 'INTEGER', 'new_chain': 'INTEGER', 'growth_certificates': 'DOUBLE', 'filtered_growth_certificates': 'INTEGER', \
-                   'birth_certificates': 'INTEGER', 'filtered_birth_certificates': 'INTEGER', 'applied_certificates': 'INTEGER', \
-                   'chains': 'INTEGER', 'growthD': 'DOUBLE', 'writeD': 'DOUBLE', 'reproduceD': 'DOUBLE', \
-                   'updateD': 'DOUBLE', 'processesD': 'DOUBLE', \
-                   'stepD': 'DOUBLE', 'step_processes_diff': 'DOUBLE', 'step_processes_diff_ratio': 'DOUBLE'}
+tracker_cols_types = {'step': 'INTEGER', 'chain_built': 'INTEGER', 'new_chain': 'INTEGER', 'applied_certificates': 'INTEGER', \
+                   'chains': 'INTEGER', 'startD': 'DOUBLE', 'growthD': 'DOUBLE', 'prepD': 'DOUBLE',\
+                    'writeD': 'DOUBLE', 'reproduceD': 'DOUBLE', 'updateD': 'DOUBLE', 'certificate_select_duration':'Double',\
+                      'processesD': 'DOUBLE', 'stepD': 'DOUBLE', 'step_processes_diff': 'DOUBLE', 'step_processes_diff_ratio': 'DOUBLE'}
+ratios_cols = {'start_durationDratio':'DOUBLE', 'growth_durationDratio':'DOUBLE', 'prep_chain_durationDratio':'DOUBLE',\
+ 'write_durationDratio':'DOUBLE', 'reproduce_durationDratio':'DOUBLE', \
+ 'update_durationDratio':'DOUBLE', 'certificate_select_duration':'DOUBLE'}
+tracker_cols_types = {**tracker_cols_types, **ratios_cols}
+
 chains_cols_types = {'worm': 'INTEGER', 'chain': 'INTEGER', 'nodes': 'TEXT',  'tip': 'TEXT', 'pointer': 'TEXT'}
 chains_cols = ['worm', 'chain', 'nodes', 'tip', 'pointer']
 
@@ -52,5 +58,13 @@ working_dir = os.getcwd()
 data_path = os.path.join(os.getcwd(), 'data')
 file_path = os.path.join(data_path, data_file_name)
 results_path = os.path.join(working_dir, 'results')
-experiment_dir = 'experiment_{id}'.format(id=experiment_id)
-experiment_path = os.path.join(results_path, experiment_dir)
+#experiment_dir = 'experiment_{id}'.format(id=experiment_id)
+source_path = os.path.join(results_path, 'validation', 'predecessors_successors.xlsx')
+experiment_path = os.path.join(results_path, experiment)
+if experiment not in os.listdir(results_path):
+    os.mkdir(experiment_path)
+plots_path = os.path.join(experiment_path, 'plots')
+if 'plots' not in os.listdir(experiment_path):
+    os.mkdir(plots_path)
+
+
